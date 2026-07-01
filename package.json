@@ -1,0 +1,25 @@
+{
+  "name": "carevan",
+  "version": "0.0.1",
+  "private": true,
+  "description": "CareVan — school-van child-safety platform (Aamir Technologies)",
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present run typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "eslint": "^9.28.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.0"
+  }
+}

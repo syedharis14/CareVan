@@ -119,3 +119,59 @@ Format:
   additively only.
 - Consequences: migration history is the schema's source of truth; fresh clone → compose up →
   migrate → seed → working demo.
+
+## ADR-0012: zod-only validation — class-validator omitted
+
+- 2026-07-02 / Accepted
+- Context: the original brief listed class-validator in the backend stack, but the conventions
+  make packages/shared zod schemas the contract of record; two validation systems would mean two
+  places for a rule to live (and drift).
+- Decision: a single ZodValidationPipe validates every request against the shared schemas;
+  responses are parsed through the shared schemas too (which strips fields like pinHash by
+  construction). class-validator/class-transformer are not installed.
+- Consequences: one validation source of truth; any DTO change is forced through packages/shared.
+
+## ADR-0013: 30-day JWT, no refresh flow; PIN brute force handled by lockout
+
+- 2026-07-02 / Accepted
+- Context: drivers/parents must not be asked to re-enter a PIN mid-week, and refresh-token
+  infrastructure is not v1-scope. PINs are 4–6 digits — low entropy by design.
+- Decision: single access token, 30-day expiry; logout discards it client-side. Brute force is
+  mitigated server-side: argon2id hashing, per-IP route throttling (5 login calls/min), and a
+  per-phone lockout (5 failed PINs → 15-minute lock, in-memory, single-instance assumption).
+  Login returns the same 401 for unknown phone vs wrong PIN so phone numbers can't be enumerated.
+- Consequences: a stolen token is valid up to 30 days (acceptable v1 trade-off; revisit with
+  refresh tokens if it ever matters); lockout state resets on server restart. Role changes and
+  account deletions also only take effect at token expiry — there is no revocation list in v1.
+
+## ADR-0014: Fail-closed authorization — every route declares @Roles or @Public
+
+- 2026-07-02 / Accepted
+- Context: a forgotten guard on a new endpoint must not silently expose data.
+- Decision: RolesGuard rejects any non-@Public route that carries no @Roles metadata (403), so an
+  undeclared route fails loudly in the first manual test instead of shipping open.
+- Consequences: slight ceremony on every controller; impossible to add an accidentally-public
+  endpoint.
+
+## ADR-0015: Local dev ports — Postgres on 5433, API on 3005
+
+- 2026-07-02 / Accepted
+- Context: the dev machine already runs a system Postgres on 5432 and another service on 3001,
+  which shadowed the CareVan container and blocked the API during Phase 1 verification.
+- Decision: docker-compose maps Postgres to host port 5433; the API defaults to PORT=3005 via
+  backend/.env. Both are dev-machine conveniences, not production choices.
+- Consequences: connection strings in .env.example use 5433; mobile/admin dev configs must point
+  at :3005.
+
+## ADR-0016: AlertLog carries type + full audit columns (additive extension)
+
+- 2026-07-02 / Accepted
+- Context: code review of Phase 1 flagged that the locked AlertLog shape couldn't support the
+  documented audit trail: REACHED_*/OVERSPEED/SOS alerts have no TripEvent (tripEventId null), so
+  rows were indistinguishable in the audit log, and the pipeline stores a push ticket id at SENT
+  and error detail at FAILED with per-transition timestamps.
+- Decision: extend AlertLog additively with `type` (AlertType enum: BOARDED, DROPPED,
+  REACHED_SCHOOL, REACHED_HOME, OVERSPEED, SOS), `pushTicketId?`, `errorDetail?`, `sentAt?`,
+  `deliveredAt?`. Mirrored as AlertTypeEnum in packages/shared.
+- Consequences: the admin alert audit is fully readable for every alert type; `type` also serves
+  as the "fire once per trip per target" dedupe key for geofence alerts in Phase 2.

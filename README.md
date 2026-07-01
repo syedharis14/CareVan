@@ -22,5 +22,12 @@ as a monthly subscription on top of their existing van arrangement.
 ```bash
 corepack enable pnpm   # pnpm 10.x
 pnpm install
-pnpm db:up             # local Postgres 16 via docker compose
+pnpm db:up             # local Postgres 16 via docker compose (host port 5433)
+pnpm --filter @carevan/shared build
+
+cd backend
+cp .env.example .env   # then set a real JWT_SECRET: openssl rand -hex 32
+pnpm prisma migrate dev
+pnpm prisma db seed    # realistic Lahore demo data — prints dev login credentials
+pnpm start:dev         # API on http://localhost:3005
 ```

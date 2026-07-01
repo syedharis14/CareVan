@@ -1,4 +1,9 @@
 export * from './tokens.js';
-
-// API contract (zod schemas) lands here in Phase 1.
-// Rule: every API change updates this package first, then both consumers.
+export * from './enums.js';
+export * from './phone.js';
+export * from './api/common.js';
+export * from './api/auth.js';
+export * from './api/users.js';
+export * from './api/schools.js';
+export * from './api/vans.js';
+export * from './api/students.js';

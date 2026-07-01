@@ -1,0 +1,260 @@
+// CareVan data model — locked in docs/PRD.md §System. Extend ADDITIVELY only:
+// new columns nullable or defaulted, never repurpose an enum value.
+// Workflow: `pnpm prisma migrate dev --name <change>` — never `db push` on shared branches.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PARENT
+  DRIVER
+  ADMIN
+}
+
+enum TripType {
+  PICKUP
+  DROPOFF
+}
+
+enum TripStatus {
+  ACTIVE
+  COMPLETED
+  ABORTED
+}
+
+enum TripEventType {
+  BOARDED
+  DROPPED
+  ABSENT
+}
+
+enum SafetyEventType {
+  OVERSPEED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  UNPAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
+
+enum AlertChannel {
+  PUSH
+  SMS_FALLBACK
+}
+
+// What the alert tells the parent. REACHED_*, OVERSPEED and SOS have no TripEvent,
+// so the audit log needs this column to stay readable for them.
+enum AlertType {
+  BOARDED
+  DROPPED
+  REACHED_SCHOOL
+  REACHED_HOME
+  OVERSPEED
+  SOS
+}
+
+enum AlertStatus {
+  CREATED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String
+  role      Role
+  pinHash   String
+  createdAt DateTime @default(now())
+
+  vansDriven    Van[]
+  studentLinks  StudentParent[]
+  subscriptions Subscription[]
+  payouts       DriverPayout[]
+  alerts        AlertLog[]
+}
+
+model School {
+  id      String @id @default(cuid())
+  name    String
+  lat     Float
+  lng     Float
+  address String
+
+  vans     Van[]
+  students Student[]
+}
+
+model Van {
+  id       String @id @default(cuid())
+  driverId String
+  driver   User   @relation(fields: [driverId], references: [id])
+  plateNo  String @unique
+  capacity Int
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  students VanStudent[]
+  trips    Trip[]
+}
+
+model Student {
+  id          String  @id @default(cuid())
+  name        String
+  schoolId    String
+  school      School  @relation(fields: [schoolId], references: [id])
+  homeLat     Float
+  homeLng     Float
+  pickupNotes String?
+
+  parents       StudentParent[]
+  vanLinks      VanStudent[]
+  tripEvents    TripEvent[]
+  subscriptions Subscription[]
+}
+
+model StudentParent {
+  studentId    String
+  student      Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parentUserId String
+  parent       User    @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, parentUserId])
+}
+
+model VanStudent {
+  vanId     String
+  van       Van     @relation(fields: [vanId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  stopOrder Int
+
+  @@id([vanId, studentId])
+}
+
+model Trip {
+  id        String     @id @default(cuid())
+  vanId     String
+  van       Van        @relation(fields: [vanId], references: [id])
+  type      TripType
+  startedAt DateTime   @default(now())
+  endedAt   DateTime?
+  status    TripStatus @default(ACTIVE)
+
+  events       TripEvent[]
+  pings        LocationPing[]
+  safetyEvents SafetyEvent[]
+  alerts       AlertLog[]
+
+  @@index([vanId, status])
+}
+
+model TripEvent {
+  id        String        @id @default(cuid())
+  tripId    String
+  trip      Trip          @relation(fields: [tripId], references: [id])
+  studentId String
+  student   Student       @relation(fields: [studentId], references: [id])
+  type      TripEventType
+  at        DateTime
+  lat       Float?
+  lng       Float?
+
+  alerts AlertLog[]
+
+  @@index([tripId])
+}
+
+model LocationPing {
+  id       String   @id @default(cuid())
+  tripId   String
+  trip     Trip     @relation(fields: [tripId], references: [id])
+  lat      Float
+  lng      Float
+  speedKmh Float
+  at       DateTime
+
+  @@index([tripId, at])
+}
+
+model SafetyEvent {
+  id     String          @id @default(cuid())
+  tripId String
+  trip   Trip            @relation(fields: [tripId], references: [id])
+  type   SafetyEventType
+  value  Float
+  at     DateTime
+
+  @@index([tripId])
+}
+
+model Subscription {
+  id           String             @id @default(cuid())
+  parentUserId String
+  parent       User               @relation(fields: [parentUserId], references: [id])
+  studentId    String
+  student      Student            @relation(fields: [studentId], references: [id])
+  status       SubscriptionStatus
+  amountPkr    Int
+
+  payments PaymentRecord[]
+}
+
+model PaymentRecord {
+  id             String        @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+  amountPkr      Int
+  method         PaymentMethod
+  note           String?
+  recordedAt     DateTime      @default(now())
+}
+
+model DriverPayout {
+  id         String    @id @default(cuid())
+  driverId   String
+  driver     User      @relation(fields: [driverId], references: [id])
+  month      String // "YYYY-MM"
+  activeDays Int
+  amountPkr  Int
+  paidAt     DateTime?
+
+  @@unique([driverId, month])
+}
+
+// Every alert must be traceable end to end: a row is created (CREATED) BEFORE any
+// dispatch, then advances SENT -> DELIVERED | FAILED. No AlertLog row, no push. Ever.
+model AlertLog {
+  id           String       @id @default(cuid())
+  type         AlertType
+  tripEventId  String?
+  tripEvent    TripEvent?   @relation(fields: [tripEventId], references: [id])
+  tripId       String
+  trip         Trip         @relation(fields: [tripId], references: [id])
+  parentUserId String
+  parent       User         @relation(fields: [parentUserId], references: [id])
+  channel      AlertChannel
+  status       AlertStatus
+  at           DateTime     @default(now())
+  // Audit trail detail: push ticket at SENT, error at FAILED, transition times.
+  pushTicketId String?
+  errorDetail  String?
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+
+  @@index([tripId])
+  @@index([parentUserId, at])
+}

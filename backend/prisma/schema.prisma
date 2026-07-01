@@ -85,6 +85,20 @@ model User {
   subscriptions Subscription[]
   payouts       DriverPayout[]
   alerts        AlertLog[]
+  pushTokens    PushToken[]
+}
+
+// Expo push targets. A user may have several devices; dispatch uses the most
+// recently updated token.
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model School {
@@ -124,6 +138,7 @@ model Student {
   vanLinks      VanStudent[]
   tripEvents    TripEvent[]
   subscriptions Subscription[]
+  alerts        AlertLog[]
 }
 
 model StudentParent {
@@ -244,10 +259,15 @@ model AlertLog {
   tripEvent    TripEvent?   @relation(fields: [tripEventId], references: [id])
   tripId       String
   trip         Trip         @relation(fields: [tripId], references: [id])
+  // Which child the alert is about (null for van-level alerts like OVERSPEED).
+  studentId    String?
+  student      Student?     @relation(fields: [studentId], references: [id])
   parentUserId String
   parent       User         @relation(fields: [parentUserId], references: [id])
   channel      AlertChannel
   status       AlertStatus
+  // Exact text sent — built at creation time so the audit shows what the parent saw.
+  message      String
   at           DateTime     @default(now())
   // Audit trail detail: push ticket at SENT, error at FAILED, transition times.
   pushTicketId String?

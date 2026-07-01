@@ -7,3 +7,5 @@ export * from './api/users.js';
 export * from './api/schools.js';
 export * from './api/vans.js';
 export * from './api/students.js';
+export * from './api/trips.js';
+export * from './api/push.js';

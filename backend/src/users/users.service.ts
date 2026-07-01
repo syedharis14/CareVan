@@ -82,6 +82,19 @@ export class UsersService {
     }
   }
 
+  /** Token is the unique key: a device moving between accounts re-homes its token. */
+  async registerPushToken(userId: string, token: string): Promise<void> {
+    await this.prisma.pushToken.upsert({
+      where: { token },
+      update: { userId },
+      create: { userId, token },
+    });
+  }
+
+  async removePushTokens(userId: string): Promise<void> {
+    await this.prisma.pushToken.deleteMany({ where: { userId } });
+  }
+
   /** Parsing through the shared schema strips pinHash by construction. */
   private toResponse(user: User): UserResponse {
     return UserResponseSchema.parse({

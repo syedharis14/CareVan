@@ -175,3 +175,56 @@ Format:
   `deliveredAt?`. Mirrored as AlertTypeEnum in packages/shared.
 - Consequences: the admin alert audit is fully readable for every alert type; `type` also serves
   as the "fire once per trip per target" dedupe key for geofence alerts in Phase 2.
+
+## ADR-0017: Alert pipeline semantics (Phase 2)
+
+- 2026-07-02 / Accepted
+- Context: the trip engine needed concrete answers the PRD leaves open: who receives which
+  alert, how push targets are stored, and how the pipeline survives crashes.
+- Decision:
+  - PushToken model (additive): token is the unique key, re-homed on account switch; dispatch
+    uses the user's most-recently-updated token only. Registered via PUT /me/push-token,
+    cleared on logout via DELETE.
+  - AlertLog gains `message` (exact text sent — audit truth) and `studentId?` (which child),
+    both additive.
+  - Recipients: BOARDED/DROPPED → that student's parents. REACHED_SCHOOL (PICKUP only, once
+    per trip) → parents of boarded students, one row per parent-student pair. REACHED_HOME
+    (DROPOFF only, once per student, while the student is still aboard) → that student's
+    parents. OVERSPEED → parents of students currently aboard, throttled to one alert per trip
+    per cooldown (SafetyEvents record every offending ping regardless).
+  - ABSENT events are recorded but not alerted in v1 (no ABSENT alert type — deferred).
+  - Alerts are NOT gated on subscription status in v1 (UNPAID parents still get alerts;
+    collection is handled personally by the founder — deferred business decision).
+  - Reliability: AlertLog rows commit in the same transaction as their TripEvent; dispatch is
+    async; a 60 s sweeper re-dispatches stale CREATED rows (crash recovery); a 30 s receipt
+    poller advances SENT → DELIVERED/FAILED; Expo-unreachable chunks stay CREATED and retry.
+  - Late offline flushes are accepted on non-ACTIVE trips (events still alert — a late BOARDED
+    beats a lost one; geofence alerts only fire while ACTIVE).
+- Consequences: every alert answers "what exactly did the parent see and did it arrive";
+  multi-device parents get pushes on their newest device only (revisit if it ever matters).
+
+## ADR-0018: Alert-pipeline hardening from Phase 2 code review
+
+- 2026-07-02 / Accepted
+- Context: review of the Phase 2 pipeline found several ways an alert or derived event could be
+  silently lost or double-fired — unacceptable for the product's spine.
+- Decisions:
+  - Ping insert + all derivation (SafetyEvents, geofence/overspeed alerts) run in ONE
+    interactive transaction guarded by a per-trip `SELECT ... FOR UPDATE` lock: atomic
+    (a failure rolls back and the client retry re-derives) and serialized (concurrent batches
+    on one trip can't both pass a once-per-trip check).
+  - Every AlertLog row is guaranteed to reach a terminal state: a receipt-expiry sweep fails
+    SENT rows with no receipt after 24 h (`RECEIPT_EXPIRED`); token-less rows stay CREATED for a
+    10-minute grace (a parent may be opening the app for the first time) before `NO_PUSH_TOKEN`.
+  - `dispatchPending` coalesces concurrent triggers (re-runs once more if a trigger arrived
+    mid-run) so a BOARDED committed during an in-flight dispatch doesn't wait up to 60 s.
+  - `DeviceNotRegistered` from Expo deletes the dead PushToken so an older valid token can win.
+  - Geofence REACHED_* requires an enter transition (the van must have been outside the fence
+    on this trip) so a van starting inside a fence doesn't fire instantly. This is a v1
+    heuristic — plain radius + enter check, still no routing/ETA.
+  - Events for a student removed from the roster mid-trip are still accepted if they already
+    have a TripEvent on the trip (a real boarding must not be dropped); truly unknown students
+    are rejected. Alerts are skipped (event still recorded) for trips ended > 24 h ago.
+- Scaling note: dispatch/receipt in-flight guards are per-process (correct for single-instance
+  v1). Horizontal scaling would need a DB-level claim (conditional updateMany on CREATED) or two
+  instances double-send.

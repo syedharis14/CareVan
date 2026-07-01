@@ -8,6 +8,14 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   /** Comma-separated allowlist. Unset = reflect any origin (dev only). */
   CORS_ORIGINS: z.string().optional(),
+  /** Geofence radius for REACHED_SCHOOL / REACHED_HOME (meters). */
+  GEOFENCE_RADIUS_M: z.coerce.number().positive().default(200),
+  /** Speed above this records SafetyEvents and (throttled) OVERSPEED alerts. */
+  OVERSPEED_LIMIT_KMH: z.coerce.number().positive().default(60),
+  /** Minimum minutes between OVERSPEED alerts on one trip. */
+  OVERSPEED_ALERT_COOLDOWN_MIN: z.coerce.number().positive().default(5),
+  /** Optional Expo access token for the push API. */
+  EXPO_ACCESS_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

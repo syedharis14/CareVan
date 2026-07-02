@@ -1,5 +1,5 @@
 import { DriverRosterStudent, TripEventType, TripType } from '@carevan/shared';
-import * as Crypto from 'expo-crypto';
+import { uuidv4 } from '../utils/uuid';
 import { create } from 'zustand';
 import { driverApi } from '../api/endpoints';
 import { enqueueEvent, pendingCounts, unsyncedEventsForTrip } from '../db/outbox';
@@ -92,7 +92,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
     if (!trip) return;
     // Write to the local outbox FIRST — the tap is durable even fully offline.
     await enqueueEvent({
-      id: Crypto.randomUUID(),
+      id: uuidv4(),
       tripId: trip.id,
       studentId,
       type,

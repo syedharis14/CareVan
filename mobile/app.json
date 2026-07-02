@@ -8,12 +8,18 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#F5F7FA",
     "newArchEnabled": true,
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "bundleIdentifier": "com.aamirtech.carevan",
       "supportsTablet": false,
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -24,7 +30,7 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "REPLACE_WITH_ANDROID_GOOGLE_MAPS_API_KEY"
+          "apiKey": "AIzaSyDV8PB_t5AcnrGW9DrTqRdCctLUHEu48Io"
         }
       },
       "permissions": [
@@ -34,7 +40,12 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION",
         "POST_NOTIFICATIONS",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "plugins": [
@@ -60,8 +71,9 @@
     "extra": {
       "apiUrl": "http://localhost:3005",
       "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
+        "projectId": "ca0de204-0878-48bc-9e1f-9ff114e3f06e"
       }
-    }
+    },
+    "owner": "harrinator08"
   }
 }

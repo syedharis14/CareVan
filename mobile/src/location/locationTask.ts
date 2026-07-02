@@ -1,5 +1,5 @@
 import { colors } from '@carevan/shared';
-import * as Crypto from 'expo-crypto';
+import { uuidv4 } from '../utils/uuid';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { KV_ACTIVE_TRIP_ID, kvGet, kvSet } from '../db/database';
@@ -37,7 +37,7 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     const speed = loc.coords.speed;
     const speedKmh = speed && speed > 0 ? Math.min(speed * 3.6, 300) : 0;
     await enqueuePing({
-      id: Crypto.randomUUID(),
+      id: uuidv4(),
       tripId,
       lat: loc.coords.latitude,
       lng: loc.coords.longitude,

@@ -100,3 +100,16 @@ export const ActiveTripResponseSchema = z.object({
   trip: TripDetailResponseSchema.nullable(),
 });
 export type ActiveTripResponse = z.infer<typeof ActiveTripResponseSchema>;
+
+// --- SOS (driver-triggered emergency; alerts parents of the van's roster) ---
+
+export const SosRequestSchema = z.object({
+  note: z.string().max(200).optional(),
+});
+export type SosRequest = z.infer<typeof SosRequestSchema>;
+
+export const SosResponseSchema = z.object({
+  /** Number of parent recipients an AlertLog row was created for. */
+  created: z.number().int(),
+});
+export type SosResponse = z.infer<typeof SosResponseSchema>;

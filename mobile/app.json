@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "CareVan",
+    "slug": "carevan",
+    "version": "0.1.0",
+    "scheme": "carevan",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F5F7FA",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "bundleIdentifier": "com.aamirtech.carevan",
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.aamirtech.carevan",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F4C81"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK"
+      ]
+    },
+    "plugins": [
+      "expo-dev-client",
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CareVan uses your location to track the van during an active trip so parents get boarded and reached alerts.",
+          "locationAlwaysAndWhenInUsePermission": "CareVan tracks the van in the background only during an active trip, so alerts keep working when the screen is off.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0F4C81"
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:3005",
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}

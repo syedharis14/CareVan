@@ -228,3 +228,37 @@ Format:
 - Scaling note: dispatch/receipt in-flight guards are per-process (correct for single-instance
   v1). Horizontal scaling would need a DB-level claim (conditional updateMany on CREATED) or two
   instances double-send.
+
+## ADR-0019: Mobile offline-first architecture (Phase 3 driver flow)
+
+- 2026-07-02 / Accepted
+- Context: drivers are on unreliable networks and battery-hostile OEMs (Oppo/ColorOS); a missed
+  BOARDED is the worst failure.
+- Decisions:
+  - Persistent SQLite outbox (expo-sqlite): every event/ping is written locally BEFORE any network
+    call and survives app kill. A sync engine drains it in batches; idempotency is the client
+    UUID + `INSERT OR IGNORE` + server dedupe, so retries never double-count or double-alert.
+  - Background location via expo-location foreground service; the task reads the active trip id
+    from a SQLite kv row so a background-launched process still works. Ping ~12s/25m; **uploads
+    are throttled to ~30s even in the background** (kv timestamp) to hit the CLAUDE.md 30–60s
+    batch target — balancing battery/data against REACHED-alert timeliness.
+  - Duplicate-tap prevention: a student's action buttons show only while status is PENDING;
+    optimistic local state + server/local-overlay reconcile keeps the row from flipping back.
+  - Auth token in expo-secure-store; api client reads it via a provider so requests always use the
+    live token. Role from the JWT selects DriverStack / Parent placeholder / Admin notice.
+- Consequences: tracking runs only during an active trip; stopTracking clears the service + kv;
+  kill/relaunch recovery rehydrates from GET /trips/mine/active.
+
+## ADR-0020: pnpm hoisted node-linker; SOS + driver-van endpoints
+
+- 2026-07-02 / Accepted
+- Context: React Native / Expo don't reliably follow pnpm's symlinked store; the driver app needs
+  its van roster and an SOS action.
+- Decisions:
+  - Root `.npmrc` sets `node-linker=hoisted` (npm-like flat node_modules) repo-wide — required for
+    Metro/RN autolinking. Backend re-verified after the relayout (prisma generate + build).
+  - `GET /me/van` (DRIVER) returns the driver's van(s) + ordered roster for the boarding list.
+  - `POST /trips/:id/sos` (DRIVER) creates SOS-type AlertLog rows for parents of the van's roster
+    and dispatches through the existing push pipeline — PUSH channel only, no SMS (per scope).
+  - Contract added to `@carevan/shared` first (api/driver.ts, SOS in api/trips.ts).
+- Consequences: one install strategy for the whole repo; SOS reuses the alert spine (traceable).

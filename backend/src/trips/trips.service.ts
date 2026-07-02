@@ -13,6 +13,9 @@ import {
   PostTripEventsRequest,
   PostTripEventsResponse,
   PostTripEventsResponseSchema,
+  SosRequest,
+  SosResponse,
+  SosResponseSchema,
   StartTripRequest,
   TripDetailResponse,
   TripDetailResponseSchema,
@@ -143,6 +146,44 @@ export class TripsService {
 
     this.alerts.triggerDispatch();
     return PostTripEventsResponseSchema.parse({ accepted, duplicates, rejected });
+  }
+
+  /**
+   * Driver SOS. Creates SOS AlertLog rows (before any dispatch) for every parent of a
+   * student on the van's roster, then dispatches through the normal push pipeline.
+   * PUSH channel only — there is no SMS in v1.
+   */
+  async sos(driver: AuthPrincipal, tripId: string, request: SosRequest): Promise<SosResponse> {
+    const trip = await this.ownedTrip(driver, tripId);
+
+    const roster = await this.prisma.vanStudent.findMany({
+      where: { vanId: trip.vanId },
+      select: { studentId: true },
+    });
+    const studentIds = roster.map((r) => r.studentId);
+    const links = studentIds.length
+      ? await this.prisma.studentParent.findMany({
+          where: { studentId: { in: studentIds } },
+          select: { parentUserId: true },
+        })
+      : [];
+    const parentIds = [...new Set(links.map((l) => l.parentUserId))];
+
+    if (parentIds.length > 0) {
+      const driverUser = await this.prisma.user.findUnique({ where: { id: driver.id } });
+      const base = alertMessage.SOS(driverUser?.name ?? 'the driver');
+      const message = request.note ? `${base} — ${request.note}` : base;
+      const drafts: AlertDraft[] = parentIds.map((parentUserId) => ({
+        type: 'SOS',
+        tripId,
+        parentUserId,
+        message,
+      }));
+      await this.prisma.$transaction((tx) => this.alerts.createAlerts(tx, drafts));
+      this.alerts.triggerDispatch();
+    }
+
+    return SosResponseSchema.parse({ created: parentIds.length });
   }
 
   async detail(principal: AuthPrincipal, tripId: string): Promise<TripDetailResponse> {

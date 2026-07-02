@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { AlertAuditQuery, AlertAuditResponse, AlertAuditResponseSchema } from '@carevan/shared';
 import { AlertType, Prisma } from '@prisma/client';
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
 import { env } from '../config/env';
@@ -56,6 +57,35 @@ export class AlertsService {
         message: d.message,
       })),
     });
+  }
+
+  /** Admin audit log — every alert with its full status trail. */
+  async auditLog(query: AlertAuditQuery): Promise<AlertAuditResponse> {
+    const rows = await this.prisma.alertLog.findMany({
+      where: query.status ? { status: query.status } : undefined,
+      orderBy: { at: 'desc' },
+      take: query.limit,
+      include: {
+        parent: { select: { id: true, name: true, phone: true } },
+        student: { select: { name: true } },
+      },
+    });
+    return AlertAuditResponseSchema.parse(
+      rows.map((r) => ({
+        id: r.id,
+        type: r.type,
+        channel: r.channel,
+        status: r.status,
+        message: r.message,
+        at: r.at,
+        sentAt: r.sentAt,
+        deliveredAt: r.deliveredAt,
+        errorDetail: r.errorDetail,
+        tripId: r.tripId,
+        studentName: r.student?.name ?? null,
+        parent: r.parent,
+      })),
+    );
   }
 
   /** Fire-and-forget helper for request paths — never throws into the caller. */

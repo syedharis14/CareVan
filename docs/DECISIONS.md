@@ -301,3 +301,25 @@ Format:
     rejected events are logged, not silently swallowed.
   - Noted, not blocking: `parent.service.ts` is N+1 bounded by a parent's child count — fine at v1
     scale; batch if the parent base grows.
+
+## ADR-0023: Admin panel — Next.js App Router, cookie session, server-computed payouts (Phase 5)
+
+- 2026-07-02 / Accepted
+- Context: the founder needs an internal ops tool for CRUD, live tracking, manual billing, driver
+  payouts, and alert auditing — speed over polish, but on the shared contract + tokens.
+- Decisions:
+  - Session auth: `loginAction` verifies `role === ADMIN` against the backend, stores the JWT in an
+    httpOnly cookie; `middleware.ts` gates all routes; server components/actions fetch the backend
+    with that cookie and parse through `@carevan/shared` zod. A 401 redirects to `/login`.
+  - Billing: manual `PaymentRecord` (CASH|TRANSFER) only — no gateway. Recording a payment flips the
+    subscription to ACTIVE in one transaction; a subscription starts UNPAID.
+  - Payouts: `activeDays` computed server-side from `LocationPing` (days with a COMPLETED trip
+    having > `ACTIVE_DAY_MIN_PINGS` pings), month boundary in `Asia/Karachi`; amount =
+    activeDays × `PAYOUT_PER_ACTIVE_DAY_PKR`. Mark-paid upserts a `DriverPayout` with `paidAt`.
+  - Live map: `react-leaflet` + OSM tiles, loaded via `dynamic({ ssr:false })` (leaflet is not
+    SSR-safe); polls a `/api/live` route handler that keeps the JWT server-side.
+  - Tokens injected from `@carevan/shared` as CSS vars; red stays SOS/overspeed-only (a FAILED
+    delivery shows amber in the audit).
+  - Demo-mode trigger deferred to Phase 6 with the demo engine.
+- Consequences: one more workspace on the hoisted install; the admin never exposes the JWT to the
+  browser; payout math is auditable from raw pings.

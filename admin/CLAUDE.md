@@ -28,3 +28,22 @@ trust-blue chrome, semantic status colors, and red reserved for SOS/danger only.
   `@carevan/shared` — drift dies here too.
 - Tables: plain HTML + Tailwind, no heavyweight grid libraries. Forms: whichever of server
   actions / simple client forms is fastest to ship correctly.
+
+## Implemented structure (Phase 5)
+
+- **Auth**: `lib/auth-actions.ts` `loginAction` posts to backend `/auth/login`, rejects non-ADMIN,
+  sets the JWT in an httpOnly cookie (`carevan_admin`); `middleware.ts` gates every route except
+  `/login`; `lib/api.ts` sends the cookie's bearer token and redirects to `/login` on 401.
+- **Data**: `lib/api.ts` `apiGet`/`apiSend` parse every backend response through a `@carevan/shared`
+  zod schema. Mutations live in `lib/actions.ts` (`'use server'`) and `revalidatePath` after.
+  Data pages are `export const dynamic = 'force-dynamic'`.
+- **Pages** (`app/(app)/`): dashboard, live (map), schools, vans (+roster), users (drivers/parents),
+  students (+parent link), subscriptions (+record payment / cancel), payouts (+mark paid), alerts.
+- **Live map**: `react-leaflet` + OpenStreetMap tiles (no API key). It MUST be loaded via
+  `next/dynamic({ ssr:false })` (see `components/LiveMap.tsx` → `LeafletMap.tsx`) — leaflet touches
+  `window` at import time and crashes SSR otherwise. The map polls `/api/live` (a route handler
+  that proxies the backend with the server-side cookie) every 10s.
+- **Tokens**: `components/TokenStyle.tsx` injects `@carevan/shared` `cssVariables` on `:root`; use
+  the `cv-*` classes in `globals.css` (which reference the vars). Never hardcode hex. Red
+  (`--color-danger`) is SOS/overspeed ONLY — a FAILED alert delivery shows amber, not red.
+- Dev: `pnpm --filter @carevan/admin dev` on `:3002`; set `BACKEND_URL` (defaults to `:3005`).

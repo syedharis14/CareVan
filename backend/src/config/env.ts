@@ -16,6 +16,10 @@ const EnvSchema = z.object({
   OVERSPEED_ALERT_COOLDOWN_MIN: z.coerce.number().positive().default(5),
   /** Optional Expo access token for the push API. */
   EXPO_ACCESS_TOKEN: z.string().optional(),
+  /** A day "counts" for driver payout if a COMPLETED trip that day had > this many pings. */
+  ACTIVE_DAY_MIN_PINGS: z.coerce.number().int().positive().default(20),
+  /** Driver payout rate per verified active day (PKR). */
+  PAYOUT_PER_ACTIVE_DAY_PKR: z.coerce.number().int().min(0).default(300),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

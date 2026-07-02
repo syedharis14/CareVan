@@ -4,6 +4,7 @@ import {
   ListTripsQuery,
   ListTripsQuerySchema,
   ListTripsResponse,
+  LiveTripsResponse,
   PostPingsRequest,
   PostPingsRequestSchema,
   PostPingsResponse,
@@ -45,6 +46,13 @@ export class TripsController {
   @Get('mine/active')
   mineActive(@CurrentUser() driver: AuthPrincipal): Promise<ActiveTripResponse> {
     return this.tripsService.mineActive(driver);
+  }
+
+  // Registered before ':id' so "live" isn't captured as a trip id.
+  @Roles('ADMIN')
+  @Get('live')
+  live(): Promise<LiveTripsResponse> {
+    return this.tripsService.live();
   }
 
   @Roles('ADMIN')

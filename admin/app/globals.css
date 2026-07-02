@@ -1,0 +1,93 @@
+@import 'tailwindcss';
+
+/*
+ * Brand colors come from @carevan/shared via CSS variables injected in the root
+ * layout (see TokenStyle) — never hardcode a hex here. These utility classes just
+ * reference those variables so pages can use semantic classes.
+ */
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.cv-surface {
+  background: var(--color-surface);
+}
+.cv-primary {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+.cv-text-primary {
+  color: var(--color-primary);
+}
+.cv-text-soft {
+  color: var(--color-ink-soft);
+}
+.cv-safe {
+  color: var(--color-safe);
+}
+.cv-transit {
+  color: var(--color-transit);
+}
+.cv-danger {
+  color: var(--color-danger);
+}
+.cv-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cv-card {
+  background: var(--color-surface);
+  border-radius: 12px;
+  border: 1px solid var(--color-primary-light);
+}
+.cv-btn {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.cv-btn:disabled {
+  opacity: 0.5;
+}
+.cv-btn-ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cv-input {
+  border: 1px solid var(--color-primary-light);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--color-surface);
+  width: 100%;
+}
+.cv-th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-ink-soft);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-primary-light);
+}
+.cv-td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-bg);
+  font-size: 14px;
+}

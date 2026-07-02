@@ -10,6 +10,8 @@ import {
   ListTripsQuery,
   ListTripsResponse,
   ListTripsResponseSchema,
+  LiveTripsResponse,
+  LiveTripsResponseSchema,
   PostTripEventsRequest,
   PostTripEventsResponse,
   PostTripEventsResponseSchema,
@@ -205,6 +207,46 @@ export class TripsService {
       orderBy: { startedAt: 'desc' },
     });
     return ActiveTripResponseSchema.parse({ trip: trip ? await this.toDetail(trip) : null });
+  }
+
+  /** Admin live map: every ACTIVE trip with its last ping, van/driver/school, and counts. */
+  async live(): Promise<LiveTripsResponse> {
+    const trips = await this.prisma.trip.findMany({
+      where: { status: 'ACTIVE' },
+      include: { van: { include: { driver: true, school: true } } },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    const rows = await Promise.all(
+      trips.map(async (trip) => {
+        const [lastPing, boardedCount, rosterCount] = await Promise.all([
+          this.prisma.locationPing.findFirst({
+            where: { tripId: trip.id },
+            orderBy: { at: 'desc' },
+          }),
+          this.prisma.tripEvent.count({ where: { tripId: trip.id, type: 'BOARDED' } }),
+          this.prisma.vanStudent.count({ where: { vanId: trip.vanId } }),
+        ]);
+        return {
+          id: trip.id,
+          type: trip.type,
+          startedAt: trip.startedAt,
+          van: { plateNo: trip.van.plateNo },
+          driver: { name: trip.van.driver.name },
+          school: {
+            name: trip.van.school.name,
+            lat: trip.van.school.lat,
+            lng: trip.van.school.lng,
+          },
+          lastPing: lastPing
+            ? { lat: lastPing.lat, lng: lastPing.lng, speedKmh: lastPing.speedKmh, at: lastPing.at }
+            : null,
+          boardedCount,
+          rosterCount,
+        };
+      }),
+    );
+    return LiveTripsResponseSchema.parse(rows);
   }
 
   async list(query: ListTripsQuery): Promise<ListTripsResponse> {

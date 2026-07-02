@@ -1,56 +1,50 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { PrimaryButton } from '../components/PrimaryButton';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
-import { theme } from '../theme/theme';
+import { colors, spacing } from '../theme/theme';
+import { Button, EmptyState, Logo } from '../ui';
 
-/** Simple centered notice used for the PARENT placeholder (Phase 4) and the ADMIN notice. */
-export function InfoScreen({ title, body }: { title: string; body: string }) {
+function Notice({
+  icon,
+  title,
+  body,
+}: {
+  icon: 'desktop-outline' | 'time-outline';
+  title: string;
+  body: string;
+}) {
   const logout = useAuthStore((s) => s.logout);
   return (
-    <View style={styles.container}>
-      <Text style={styles.brand}>CareVan</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.body}>{body}</Text>
-      <PrimaryButton label="Log out" variant="ghost" onPress={logout} style={styles.button} />
-    </View>
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.top}>
+        <Logo size={40} />
+      </View>
+      <View style={styles.center}>
+        <EmptyState icon={icon} title={title} subtitle={body} />
+      </View>
+      <View style={styles.bottom}>
+        <Button
+          label="Log out"
+          variant="ghost"
+          icon="log-out-outline"
+          onPress={() => void logout()}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
-export const ParentPlaceholderScreen = () => (
-  <InfoScreen
-    title="Parent app is coming next"
-    body="The parent experience — live tracking and instant alerts — lands in the next update. You're signed in and ready."
-  />
-);
-
 export const AdminNoticeScreen = () => (
-  <InfoScreen
+  <Notice
+    icon="desktop-outline"
     title="Use the web admin"
     body="Admin accounts manage CareVan from the desktop web panel, not this app."
   />
 );
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
-  },
-  brand: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.xxl,
-  },
-  title: { fontSize: 22, fontWeight: '700', color: theme.colors.ink, textAlign: 'center' },
-  body: {
-    fontSize: 16,
-    color: theme.colors.inkSoft,
-    textAlign: 'center',
-    marginTop: theme.spacing.md,
-    lineHeight: 23,
-  },
-  button: { marginTop: theme.spacing.xxl, alignSelf: 'stretch' },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  top: { alignItems: 'center', paddingTop: spacing.xl },
+  center: { flex: 1, justifyContent: 'center' },
+  bottom: { padding: spacing.xl },
 });

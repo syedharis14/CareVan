@@ -1,23 +1,29 @@
 import { useCallback } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ChildStatusCard } from '../../components/ChildStatusCard';
 import { ParentStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { useParentStore } from '../../store/parentStore';
-import { theme } from '../../theme/theme';
+import { colors, spacing } from '../../theme/theme';
+import { EmptyState, Icon, Logo, Screen, Text } from '../../ui';
 
-type Nav = NativeStackNavigationProp<ParentStackParamList, 'Children'>;
-
+type Nav = NativeStackNavigationProp<ParentStackParamList>;
 const POLL_MS = 15_000;
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export function ChildrenScreen() {
   const navigation = useNavigation<Nav>();
-  const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s) => s.user);
   const { children, loading, error, refresh } = useParentStore();
 
-  // Reconcile on open + poll — push is never guaranteed, the UI must not depend on it.
   useFocusEffect(
     useCallback(() => {
       void refresh();
@@ -26,23 +32,39 @@ export function ChildrenScreen() {
     }, [refresh]),
   );
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} />}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Your children</Text>
-        <Pressable onPress={logout} accessibilityRole="button">
-          <Text style={styles.logout}>Log out</Text>
-        </Pressable>
-      </View>
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.flex}>
+        <Text variant="caption" color={colors.inkSoft}>
+          {greeting()}
+        </Text>
+        <Text variant="h1" numberOfLines={1}>
+          {firstName}
+        </Text>
+      </View>
+      <Logo size={38} wordmark={false} />
+    </View>
+  );
+
+  return (
+    <Screen scroll header={header} refreshing={loading} onRefresh={() => void refresh()}>
+      {error ? (
+        <View style={styles.error}>
+          <Icon name="cloud-offline-outline" size={16} color={colors.ink} />
+          <Text variant="caption" color={colors.ink}>
+            {error}
+          </Text>
+        </View>
+      ) : null}
 
       {children.length === 0 && !loading ? (
-        <Text style={styles.muted}>No children linked to your account yet. Contact CareVan.</Text>
+        <EmptyState
+          icon="people-outline"
+          title="No children yet"
+          subtitle="No children are linked to your account. Contact CareVan to get set up."
+        />
       ) : (
         children.map((child) => (
           <ChildStatusCard
@@ -52,26 +74,23 @@ export function ChildrenScreen() {
           />
         ))
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
-  content: { padding: theme.spacing.xl },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  title: { fontSize: 26, fontWeight: '800', color: theme.colors.ink },
-  logout: { color: theme.colors.primary, fontSize: 15, fontWeight: '600' },
-  error: { color: theme.colors.danger, marginBottom: theme.spacing.md },
-  muted: {
-    color: theme.colors.inkSoft,
-    fontSize: 15,
-    marginTop: theme.spacing.xl,
-    textAlign: 'center',
+  flex: { flex: 1 },
+  error: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
   },
 });

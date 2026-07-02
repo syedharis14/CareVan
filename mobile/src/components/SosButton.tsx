@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
-import { theme } from '../theme/theme';
+import { Alert, Pressable, StyleSheet } from 'react-native';
 import { useTripStore } from '../store/tripStore';
+import { colors, radii, spacing } from '../theme/theme';
+import { Icon, Text } from '../ui';
 
 /** The one place danger-red belongs in the driver app. Two-step to avoid mis-taps. */
 export function SosButton() {
@@ -45,22 +46,25 @@ export function SosButton() {
         sending && styles.disabled,
       ]}
     >
-      <Text style={styles.label}>{sending ? 'Sending…' : 'SOS'}</Text>
+      <Icon name="warning" size={18} color={colors.surface} />
+      <Text variant="button" color={colors.surface} style={styles.label}>
+        {sending ? 'Sending…' : 'SOS'}
+      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: theme.touch.minTargetPx,
-    minWidth: theme.touch.minTargetPx,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radii.button,
-    backgroundColor: theme.colors.danger,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.xs,
+    height: 44,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    backgroundColor: colors.danger,
   },
-  label: { color: theme.colors.surface, fontSize: 18, fontWeight: '700', letterSpacing: 1 },
+  label: { letterSpacing: 1 },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.6 },
 });

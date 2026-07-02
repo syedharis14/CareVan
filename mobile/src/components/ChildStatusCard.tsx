@@ -1,68 +1,74 @@
 import { ChildSummary } from '@carevan/shared';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { theme } from '../theme/theme';
-import { statusView } from '../utils/childStatus';
+import { StyleSheet, View } from 'react-native';
+import { colors, spacing } from '../theme/theme';
+import { Avatar, Card, Chip, Icon, Stepper, Text } from '../ui';
+import { journey, statusView } from '../utils/childStatus';
 
-/** The emotional hero: a big, color-dominant status card. Tapping opens the live view. */
+/** The parent home hero: avatar, live status, and the child's journey stepper. */
 export function ChildStatusCard({ child, onPress }: { child: ChildSummary; onPress: () => void }) {
   const view = statusView(child.status);
+  const { steps, current } = journey(child.status, child.activeTrip?.type);
+
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => pressed && styles.pressed}
-    >
+    <Card onPress={onPress} padded={false} style={styles.card}>
       {child.sosActive ? (
         <View style={styles.sos}>
-          <Text style={styles.sosText}>🚨 EMERGENCY — driver raised an SOS. Call them now.</Text>
+          <Icon name="warning" size={15} color={colors.surface} />
+          <Text variant="label" color={colors.surface}>
+            Emergency — the driver raised an SOS
+          </Text>
         </View>
       ) : null}
 
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: theme.withAlpha(view.color, 0.12), borderColor: view.color },
-        ]}
-      >
-        <Text style={styles.name}>{child.student.name}</Text>
-        <View style={styles.statusRow}>
-          <Text style={[styles.icon, { color: view.color }]}>{view.icon}</Text>
-          <Text style={[styles.status, { color: view.color }]}>{view.label}</Text>
+      <View style={styles.body}>
+        <View style={styles.head}>
+          <Avatar name={child.student.name} color={view.color} size={48} />
+          <View style={styles.headText}>
+            <Text variant="title" numberOfLines={1}>
+              {child.student.name}
+            </Text>
+            <Text variant="caption" color={colors.inkSoft}>
+              {child.van
+                ? `Van ${child.van.plateNo} · ${child.van.driverName}`
+                : 'No van assigned yet'}
+            </Text>
+          </View>
+          <Icon name="chevron-forward" size={20} color={colors.inkSoft} />
         </View>
-        {child.van ? (
-          <Text style={styles.sub}>
-            Van {child.van.plateNo} · {child.van.driverName}
-          </Text>
-        ) : (
-          <Text style={styles.sub}>No van assigned yet</Text>
-        )}
-        {child.subscriptionStatus === 'UNPAID' ? (
-          <Text style={styles.unpaid}>Subscription unpaid — please clear your dues.</Text>
-        ) : null}
+
+        <View style={styles.statusRow}>
+          <Chip label={view.label} tone={view.tone} icon={view.icon} />
+          {child.subscriptionStatus === 'UNPAID' ? (
+            <Chip label="Unpaid" tone="transit" icon="alert-circle" />
+          ) : null}
+        </View>
+
+        <View style={styles.stepper}>
+          <Stepper steps={steps} current={current} accent={view.color} />
+        </View>
       </View>
-    </Pressable>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.9 },
-  card: {
-    borderRadius: theme.radii.card,
-    borderWidth: 1.5,
-    padding: theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
-  },
-  name: { fontSize: 22, fontWeight: '800', color: theme.colors.ink },
-  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.sm },
-  icon: { fontSize: 22, marginRight: theme.spacing.sm },
-  status: { fontSize: 20, fontWeight: '700' },
-  sub: { fontSize: 14, color: theme.colors.inkSoft, marginTop: theme.spacing.md },
-  unpaid: { fontSize: 13, color: theme.colors.ink, marginTop: theme.spacing.sm, fontWeight: '600' },
+  card: { marginBottom: spacing.lg, overflow: 'hidden' },
   sos: {
-    backgroundColor: theme.colors.danger,
-    borderTopLeftRadius: theme.radii.card,
-    borderTopRightRadius: theme.radii.card,
-    padding: theme.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.danger,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  sosText: { color: theme.colors.surface, fontWeight: '700', textAlign: 'center' },
+  body: { padding: spacing.lg },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headText: { flex: 1 },
+  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  stepper: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
 });

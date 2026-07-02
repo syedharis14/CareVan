@@ -1,9 +1,28 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { normalizePkPhone } from '@carevan/shared';
-import { PrimaryButton } from '../components/PrimaryButton';
 import { useAuthStore } from '../store/authStore';
-import { theme } from '../theme/theme';
+import { colors, radii, spacing, type } from '../theme/theme';
+import { Button, Card, Icon, IconName, Logo, Text } from '../ui';
+
+function Field({
+  label,
+  icon,
+  ...input
+}: { label: string; icon: IconName } & React.ComponentProps<typeof TextInput>) {
+  return (
+    <View style={styles.field}>
+      <Text variant="label" color={colors.inkSoft} style={styles.fieldLabel}>
+        {label}
+      </Text>
+      <View style={styles.inputWrap}>
+        <Icon name={icon} size={19} color={colors.inkSoft} />
+        <TextInput style={styles.input} placeholderTextColor={colors.inkSoft} {...input} />
+      </View>
+    </View>
+  );
+}
 
 export function LoginScreen() {
   const login = useAuthStore((s) => s.login);
@@ -17,7 +36,7 @@ export function LoginScreen() {
     try {
       await login(normalizePkPhone(phone), pin);
     } catch {
-      // error surfaced via the store
+      /* error surfaced via the store */
     } finally {
       setBusy(false);
     }
@@ -26,96 +45,92 @@ export function LoginScreen() {
   const canSubmit = phone.trim().length >= 10 && pin.length >= 4;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.brandBlock}>
-        <Text style={styles.brand}>CareVan</Text>
-        <Text style={styles.tagline}>Your child, tracked safely.</Text>
-      </View>
+    <SafeAreaView style={styles.screen}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.content}>
+          <View style={styles.brand}>
+            <Logo size={72} wordmark={false} />
+            <Text variant="display" color={colors.primary} style={styles.name}>
+              CareVan
+            </Text>
+            <Text variant="bodyLg" color={colors.inkSoft}>
+              Your child, tracked safely.
+            </Text>
+          </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Phone number</Text>
-        <TextInput
-          style={styles.input}
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="03XX XXXXXXX"
-          placeholderTextColor={theme.colors.inkSoft}
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-        />
+          <Card>
+            <Field
+              label="PHONE NUMBER"
+              icon="call-outline"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="03XX XXXXXXX"
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+            />
+            <Field
+              label="PIN"
+              icon="lock-closed-outline"
+              value={pin}
+              onChangeText={setPin}
+              placeholder="••••"
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+            />
 
-        <Text style={styles.label}>PIN</Text>
-        <TextInput
-          style={styles.input}
-          value={pin}
-          onChangeText={setPin}
-          placeholder="••••"
-          placeholderTextColor={theme.colors.inkSoft}
-          keyboardType="number-pad"
-          secureTextEntry
-          maxLength={6}
-        />
+            {error ? (
+              <View style={styles.error}>
+                <Icon name="alert-circle" size={16} color={colors.ink} />
+                <Text variant="caption" color={colors.ink}>
+                  {error}
+                </Text>
+              </View>
+            ) : null}
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Button
+              label="Sign in"
+              icon="arrow-forward"
+              onPress={onSubmit}
+              disabled={!canSubmit}
+              loading={busy}
+              style={styles.submit}
+            />
+          </Card>
 
-        <PrimaryButton
-          label="Sign in"
-          onPress={onSubmit}
-          disabled={!canSubmit}
-          loading={busy}
-          style={styles.submit}
-        />
-        <Text style={styles.help}>
-          Accounts are set up by CareVan. Contact us if you can&apos;t sign in.
-        </Text>
-      </View>
-    </KeyboardAvoidingView>
+          <Text variant="caption" color={colors.inkSoft} center style={styles.help}>
+            Accounts are set up by CareVan. Contact us if you can&apos;t sign in.
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.bg,
-    padding: theme.spacing.xl,
-    justifyContent: 'center',
-  },
-  brandBlock: { alignItems: 'center', marginBottom: theme.spacing.xxl },
-  brand: { fontSize: 40, fontWeight: '800', color: theme.colors.primary },
-  tagline: { fontSize: 16, color: theme.colors.inkSoft, marginTop: theme.spacing.xs },
-  form: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.card,
-    padding: theme.spacing.xl,
-    ...theme.cardShadow,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.ink,
-    marginBottom: theme.spacing.xs,
-    marginTop: theme.spacing.md,
-  },
-  input: {
+  screen: { flex: 1, backgroundColor: colors.bg },
+  flex: { flex: 1 },
+  content: { flex: 1, justifyContent: 'center', padding: spacing.xl },
+  brand: { alignItems: 'center', marginBottom: spacing.xxl },
+  name: { marginTop: spacing.lg },
+  field: { marginBottom: spacing.lg },
+  fieldLabel: { marginBottom: spacing.sm, letterSpacing: 0.5 },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderWidth: 1,
-    borderColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.button,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    fontSize: 18,
-    color: theme.colors.ink,
-    backgroundColor: theme.colors.bg,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.bg,
   },
-  error: { color: theme.colors.danger, marginTop: theme.spacing.md, fontSize: 14 },
-  submit: { marginTop: theme.spacing.xl },
-  help: {
-    fontSize: 13,
-    color: theme.colors.inkSoft,
-    textAlign: 'center',
-    marginTop: theme.spacing.lg,
-  },
+  input: { flex: 1, paddingVertical: spacing.md, ...type.bodyLg, color: colors.ink },
+  error: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
+  submit: { marginTop: spacing.sm },
+  help: { marginTop: spacing.xl },
 });

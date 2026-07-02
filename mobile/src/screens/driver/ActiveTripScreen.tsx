@@ -1,13 +1,13 @@
 import { useCallback } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
-import { PrimaryButton } from '../../components/PrimaryButton';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import { SosButton } from '../../components/SosButton';
 import { StudentRow } from '../../components/StudentRow';
 import { DriverStackParamList } from '../../navigation/types';
 import { useTripStore } from '../../store/tripStore';
-import { theme } from '../../theme/theme';
+import { colors, spacing } from '../../theme/theme';
+import { Button, Chip, Header, Screen, Text } from '../../ui';
 
 type Nav = NativeStackNavigationProp<DriverStackParamList, 'ActiveTrip'>;
 
@@ -25,7 +25,6 @@ export function ActiveTripScreen() {
     refreshPending,
   } = useTripStore();
 
-  // Reconcile with the server periodically while the screen is open.
   useFocusEffect(
     useCallback(() => {
       void refreshStatuses();
@@ -58,10 +57,11 @@ export function ActiveTripScreen() {
 
   if (!trip) {
     return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyText}>No active trip.</Text>
-        <PrimaryButton label="Back" variant="ghost" onPress={() => navigation.goBack()} />
-      </View>
+      <Screen header={<Header onBack={() => navigation.goBack()} title="Trip" />}>
+        <Text variant="body" color={colors.inkSoft} center>
+          No active trip.
+        </Text>
+      </Screen>
     );
   }
 
@@ -69,23 +69,38 @@ export function ActiveTripScreen() {
   const isPickup = trip.type === 'PICKUP';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>{isPickup ? 'Morning pickup' : 'Afternoon dropoff'}</Text>
-          <SosButton />
+    <Screen
+      padded={false}
+      header={
+        <Header
+          title={isPickup ? 'Morning pickup' : 'Afternoon dropoff'}
+          onBack={() => navigation.goBack()}
+          right={<SosButton />}
+        />
+      }
+      footer={
+        <View style={styles.footer}>
+          <Button label="End trip" icon="stop-circle" onPress={confirmEnd} loading={busy} />
         </View>
-        <Text style={totalPending > 0 ? styles.syncing : styles.synced}>
-          {totalPending > 0
-            ? `⟳ Syncing ${totalPending} update${totalPending === 1 ? '' : 's'}…`
-            : '✓ All synced'}
-        </Text>
+      }
+    >
+      <View style={styles.syncRow}>
+        <Chip
+          label={
+            totalPending > 0
+              ? `Syncing ${totalPending} update${totalPending === 1 ? '' : 's'}`
+              : 'All synced'
+          }
+          tone={totalPending > 0 ? 'transit' : 'safe'}
+          icon={totalPending > 0 ? 'sync' : 'checkmark-circle'}
+        />
       </View>
 
       <FlatList
         data={students}
         keyExtractor={(s) => s.id}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <StudentRow
             student={item}
@@ -94,41 +109,25 @@ export function ActiveTripScreen() {
             onRecord={(type) => record(item.id, type)}
           />
         )}
-        ListEmptyComponent={<Text style={styles.muted}>No students on this route.</Text>}
+        ListEmptyComponent={
+          <Text variant="body" color={colors.inkSoft} center style={styles.empty}>
+            No students on this route.
+          </Text>
+        }
       />
-
-      <View style={styles.footer}>
-        <PrimaryButton label="End trip" variant="primary" onPress={confirmEnd} loading={busy} />
-      </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
-  header: {
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-  },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '800', color: theme.colors.ink },
-  syncing: { color: theme.colors.transit, marginTop: theme.spacing.xs, fontWeight: '600' },
-  synced: { color: theme.colors.safe, marginTop: theme.spacing.xs, fontWeight: '600' },
-  list: { paddingHorizontal: theme.spacing.xl, paddingBottom: theme.spacing.xl },
-  muted: { color: theme.colors.inkSoft, textAlign: 'center', marginTop: theme.spacing.xl },
+  syncRow: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  list: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
+  empty: { marginTop: spacing.xxl },
   footer: {
-    padding: theme.spacing.xl,
+    padding: spacing.xl,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.primaryLight,
-    backgroundColor: theme.colors.surface,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.lg,
-    padding: theme.spacing.xl,
-  },
-  emptyText: { fontSize: 18, color: theme.colors.inkSoft },
 });

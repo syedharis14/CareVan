@@ -1,9 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { PrimaryButton } from '../../components/PrimaryButton';
+import { StyleSheet, View } from 'react-native';
 import { DriverStackParamList } from '../../navigation/types';
-import { theme } from '../../theme/theme';
+import { colors, radii, spacing } from '../../theme/theme';
+import { Button, Card, Header, Screen, Text } from '../../ui';
 import { batterySteps, getOemName, openBatterySettings, setBatteryAck } from '../../utils/battery';
 
 type Nav = NativeStackNavigationProp<DriverStackParamList, 'BatteryWhitelist'>;
@@ -18,68 +18,66 @@ export function BatteryWhitelistScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Keep CareVan running</Text>
-      <Text style={styles.intro}>
+    <Screen
+      scroll
+      header={<Header onBack={() => navigation.goBack()} title="Background permission" />}
+    >
+      <Text variant="h1">Keep CareVan running</Text>
+      <Text variant="body" color={colors.inkSoft} style={styles.intro}>
         {getOemName()} phones can stop apps in the background to save battery. If that happens
-        mid-trip, parents stop getting alerts. Please allow CareVan to run — it only tracks during
-        an active trip.
+        mid-trip, parents stop getting alerts. CareVan only tracks during an active trip.
       </Text>
 
-      <View style={styles.card}>
+      <Card>
         {steps.map((step, i) => (
-          <View key={i} style={styles.stepRow}>
+          <View key={i} style={[styles.step, i > 0 && styles.divider]}>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{i + 1}</Text>
+              <Text variant="label" color={colors.surface}>
+                {i + 1}
+              </Text>
             </View>
-            <Text style={styles.stepText}>{step}</Text>
+            <Text variant="body" style={styles.stepText}>
+              {step}
+            </Text>
           </View>
         ))}
-      </View>
+      </Card>
 
-      <PrimaryButton label="Open phone settings" onPress={openBatterySettings} style={styles.mt} />
-      <PrimaryButton
+      <Button
+        label="Open phone settings"
+        variant="secondary"
+        icon="settings-outline"
+        onPress={openBatterySettings}
+        style={styles.mt}
+      />
+      <Button
         label="I've enabled it"
         variant="safe"
+        icon="checkmark-circle"
         onPress={confirmDone}
         style={styles.mt}
       />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
-  content: { padding: theme.spacing.xl },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: theme.colors.ink,
-    marginBottom: theme.spacing.sm,
+  intro: { marginTop: spacing.sm, marginBottom: spacing.xl },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
   },
-  intro: {
-    fontSize: 16,
-    color: theme.colors.inkSoft,
-    lineHeight: 23,
-    marginBottom: theme.spacing.xl,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.card,
-    padding: theme.spacing.lg,
-    ...theme.cardShadow,
-  },
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: theme.spacing.lg },
+  divider: { borderTopWidth: 1, borderTopColor: colors.border },
   badge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.primary,
+    borderRadius: radii.pill,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing.md,
   },
-  badgeText: { color: theme.colors.surface, fontWeight: '700' },
-  stepText: { flex: 1, fontSize: 15, color: theme.colors.ink, lineHeight: 22 },
-  mt: { marginTop: theme.spacing.lg },
+  stepText: { flex: 1 },
+  mt: { marginTop: spacing.lg },
 });

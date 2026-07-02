@@ -1,22 +1,28 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { TripType } from '@carevan/shared';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { ensureLocationPermission } from '../../location/locationTask';
 import { DriverStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { useTripStore } from '../../store/tripStore';
-import { theme } from '../../theme/theme';
+import { colors, radii, spacing, withAlpha } from '../../theme/theme';
+import { Button, Card, Icon, Logo, Screen, Text } from '../../ui';
 import { getBatteryAck, isAggressiveOem } from '../../utils/battery';
 
-type Nav = NativeStackNavigationProp<DriverStackParamList, 'Today'>;
+type Nav = NativeStackNavigationProp<DriverStackParamList>;
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export function TodayScreen() {
   const navigation = useNavigation<Nav>();
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
   const { ready, vanId, schoolName, students, trip, busy, error, bootstrap, startTrip } =
     useTripStore();
   const [needsBattery, setNeedsBattery] = useState(false);
@@ -45,68 +51,101 @@ export function TodayScreen() {
     }
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.hi}>Assalam-o-Alaikum</Text>
-          <Text style={styles.name}>{user?.name ?? 'Driver'}</Text>
-        </View>
-        <Pressable onPress={logout} accessibilityRole="button">
-          <Text style={styles.logout}>Log out</Text>
-        </Pressable>
-      </View>
+  const firstName = user?.name?.split(' ')[0] ?? 'Driver';
 
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.flex}>
+        <Text variant="caption" color={colors.inkSoft}>
+          {greeting()}
+        </Text>
+        <Text variant="h1" numberOfLines={1}>
+          {firstName}
+        </Text>
+      </View>
+      <Logo size={38} wordmark={false} />
+    </View>
+  );
+
+  return (
+    <Screen scroll header={header}>
       {needsBattery ? (
-        <Pressable
-          style={styles.banner}
+        <Card
           onPress={() => navigation.navigate('BatteryWhitelist')}
-          accessibilityRole="button"
+          style={styles.banner}
+          variant="flat"
         >
-          <Text style={styles.bannerTitle}>⚠ Action needed to keep alerts working</Text>
-          <Text style={styles.bannerText}>
-            Tap to allow CareVan to run in the background on your phone.
-          </Text>
-        </Pressable>
+          <View style={styles.bannerRow}>
+            <View style={styles.bannerIcon}>
+              <Icon name="battery-charging" size={20} color={colors.transit} />
+            </View>
+            <View style={styles.flex}>
+              <Text variant="bodyMd">Keep alerts working</Text>
+              <Text variant="caption" color={colors.inkSoft}>
+                Allow CareVan to run in the background
+              </Text>
+            </View>
+            <Icon name="chevron-forward" size={18} color={colors.inkSoft} />
+          </View>
+        </Card>
       ) : null}
 
       {!ready ? (
-        <Text style={styles.muted}>Loading your van…</Text>
+        <Text variant="body" color={colors.inkSoft}>
+          Loading your van…
+        </Text>
       ) : !vanId ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>No van assigned yet</Text>
-          <Text style={styles.muted}>
+        <Card>
+          <Text variant="title">No van assigned yet</Text>
+          <Text variant="body" color={colors.inkSoft} style={styles.mt}>
             CareVan hasn&apos;t linked a van to your account. Please contact the office.
           </Text>
-        </View>
+        </Card>
       ) : (
         <>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{schoolName}</Text>
-            <Text style={styles.muted}>{students.length} students on your route</Text>
-          </View>
+          <Card>
+            <View style={styles.vanRow}>
+              <View style={styles.vanIcon}>
+                <Icon name="bus" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.flex}>
+                <Text variant="title">{schoolName}</Text>
+                <Text variant="caption" color={colors.inkSoft}>
+                  {students.length} students on your route
+                </Text>
+              </View>
+            </View>
+          </Card>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <Text variant="caption" color={colors.ink} style={styles.mt}>
+              {error}
+            </Text>
+          ) : null}
 
           {trip ? (
-            <PrimaryButton
+            <Button
               label="Resume active trip"
               variant="safe"
+              icon="navigate"
               onPress={() => navigation.navigate('ActiveTrip')}
               style={styles.action}
             />
           ) : (
             <>
-              <Text style={styles.sectionLabel}>Start a trip</Text>
-              <PrimaryButton
-                label="Start morning pickup"
+              <Text variant="label" color={colors.inkSoft} style={styles.section}>
+                START A TRIP
+              </Text>
+              <Button
+                label="Morning pickup"
+                icon="sunny"
                 onPress={() => begin('PICKUP')}
                 loading={busy}
-                style={styles.action}
               />
-              <PrimaryButton
-                label="Start afternoon dropoff"
-                variant="ghost"
+              <Button
+                label="Afternoon dropoff"
+                variant="secondary"
+                icon="home"
                 onPress={() => begin('DROPOFF')}
                 loading={busy}
                 style={styles.action}
@@ -115,48 +154,39 @@ export function TodayScreen() {
           )}
         </>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
-  content: { padding: theme.spacing.xl },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  hi: { fontSize: 15, color: theme.colors.inkSoft },
-  name: { fontSize: 26, fontWeight: '800', color: theme.colors.ink },
-  logout: { color: theme.colors.primary, fontSize: 15, fontWeight: '600' },
-  banner: {
-    backgroundColor: theme.withAlpha(theme.colors.transit, 0.15),
-    borderRadius: theme.radii.card,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.transit,
+  flex: { flex: 1 },
+  mt: { marginTop: spacing.sm },
+  banner: { marginBottom: spacing.lg, borderColor: colors.transit },
+  bannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  bannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: withAlpha(colors.transit, 0.14),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  bannerTitle: { fontWeight: '700', color: theme.colors.ink, fontSize: 15 },
-  bannerText: { color: theme.colors.inkSoft, marginTop: 2, fontSize: 14 },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.card,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    ...theme.cardShadow,
+  vanRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  vanIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.lg,
+    backgroundColor: withAlpha(colors.primary, 0.1),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.ink },
-  muted: { color: theme.colors.inkSoft, fontSize: 15, marginTop: 2 },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.inkSoft,
-    marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
-  action: { marginTop: theme.spacing.md },
-  error: { color: theme.colors.danger, marginBottom: theme.spacing.md },
+  section: { marginTop: spacing.xl, marginBottom: spacing.sm, letterSpacing: 0.5 },
+  action: { marginTop: spacing.md },
 });

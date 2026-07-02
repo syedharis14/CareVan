@@ -1,6 +1,6 @@
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
-import { PrimaryButton } from './PrimaryButton';
-import { theme } from '../theme/theme';
+import { Alert, Linking, StyleSheet, View } from 'react-native';
+import { colors, spacing } from '../theme/theme';
+import { Avatar, Button, Card, Text } from '../ui';
 
 /** Driver + van, with a native tel: call button (no in-app calling/chat — v1 scope). */
 export function DriverCard({
@@ -12,14 +12,25 @@ export function DriverCard({
   driverName: string;
   driverPhone: string;
 }) {
+  const first = driverName.split(' ')[0] ?? 'driver';
   return (
-    <View style={styles.card}>
-      <Text style={styles.label}>Your driver</Text>
-      <Text style={styles.name}>{driverName}</Text>
-      <Text style={styles.plate}>Van {plateNo}</Text>
-      <PrimaryButton
-        label={`Call ${driverName.split(' ')[0] ?? 'driver'}`}
-        variant="ghost"
+    <Card>
+      <Text variant="label" color={colors.inkSoft} style={styles.label}>
+        YOUR DRIVER
+      </Text>
+      <View style={styles.row}>
+        <Avatar name={driverName} color={colors.primary} />
+        <View style={styles.info}>
+          <Text variant="title">{driverName}</Text>
+          <Text variant="caption" color={colors.inkSoft}>
+            Van {plateNo}
+          </Text>
+        </View>
+      </View>
+      <Button
+        label={`Call ${first}`}
+        variant="secondary"
+        icon="call"
         onPress={() =>
           void Linking.openURL(`tel:${driverPhone}`).catch(() =>
             Alert.alert('Cannot place call', `Dial ${driverPhone} manually.`),
@@ -27,20 +38,13 @@ export function DriverCard({
         }
         style={styles.call}
       />
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.card,
-    padding: theme.spacing.lg,
-    marginTop: theme.spacing.lg,
-    ...theme.cardShadow,
-  },
-  label: { fontSize: 13, color: theme.colors.inkSoft, fontWeight: '600' },
-  name: { fontSize: 18, fontWeight: '700', color: theme.colors.ink, marginTop: 2 },
-  plate: { fontSize: 15, color: theme.colors.inkSoft, marginTop: 2 },
-  call: { marginTop: theme.spacing.md },
+  label: { letterSpacing: 0.5 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md },
+  info: { flex: 1 },
+  call: { marginTop: spacing.lg },
 });

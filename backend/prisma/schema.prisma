@@ -168,6 +168,9 @@ model Trip {
   startedAt DateTime   @default(now())
   endedAt   DateTime?
   status    TripStatus @default(ACTIVE)
+  // Scripted sales-demo trip: runs the real pipeline but is excluded from payouts
+  // (and any future safety-score/billing rollups).
+  isDemo    Boolean    @default(false)
 
   events       TripEvent[]
   pings        LocationPing[]

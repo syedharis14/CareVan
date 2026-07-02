@@ -323,3 +323,35 @@ Format:
   - Demo-mode trigger deferred to Phase 6 with the demo engine.
 - Consequences: one more workspace on the hoisted install; the admin never exposes the JWT to the
   browser; payout math is auditable from raw pings.
+
+## ADR-0024: Demo mode drives the real pipeline in-process (Phase 6)
+
+- 2026-07-02 / Accepted (implements ADR-0009)
+- Context: the founder's sales demo must be one-click, believable, and never rot into a fake that
+  lies about what the product does.
+- Decisions:
+  - `DemoService` (backend) creates a REAL `Trip` (flagged `isDemo`) on the seeded demo van, then
+    drives it through the SAME services production uses — `TripsService.postEvents` for BOARDED and
+    `PingProcessorService.ingest` for each scripted ping. There is no parallel alert/push path; the
+    demo constructs the demo driver's `AuthPrincipal` and calls the real methods in-process.
+  - REACHED_SCHOOL is derived by the real geofence: the scripted Lahore route
+    (`demo/lahore-route.ts`, ~600 m ending at the demo school) starts outside the school fence, so
+    the Phase-4 enter-transition logic fires it ~60 s after BOARDED. Ping interval keeps speeds
+    under the overspeed limit so no spurious safety alert fires mid-demo.
+  - Isolation: `Trip.isDemo` excludes demo trips from payout `activeDays`; demo entities are
+    separate accounts so no real family sees demo data. One run at a time (409 while running);
+    "run the seed" error if demo entities are missing; timers cleared on each start.
+  - Admin: a one-click **Demo mode** page polls `/demo/status` for live BOARDED/REACHED progress;
+    the founder signs the parent phone in as the demo parent to receive the live pushes.
+  - Hardening (this phase): the alert-delivery fallback is the reconcile-on-open + poll already in
+    both apps (parent `GET /me/children`, driver `refreshStatuses` / `GET /trips/mine/active`) — the
+    UI never depends on a push arriving. ColorOS survival + kill-recovery are covered by the driver
+    field-test checklist; the demo-day runbook is `docs/field-tests/2026-07-02-demo-day.md`.
+- Consequences: every demo is also an end-to-end pipeline smoke test; a future safety-score/billing
+  rollup must also honor `isDemo` (only payouts consumes it today).
+- demo-master review fixes: the running-lock is acquired synchronously before any await (closes the
+  double-submit race); `start()` reaps orphaned ACTIVE demo trips (crash recovery) and aborts the
+  new trip if BOARDED fails; the route's final point and the seeded demo school share one
+  `DEMO_SCHOOL` constant (no silent drift). **Follow-up (not v1-blocking): there is no automated
+  test suite yet** — the demo path is verified live + by review each change; a backend integration
+  test (test DB + fake timers asserting BOARDED→REACHED_SCHOOL) is the top hardening debt.

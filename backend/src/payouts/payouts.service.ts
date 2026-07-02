@@ -93,10 +93,7 @@ export class PayoutsService {
    * activeDays = count of Pakistan-local days in the month with a COMPLETED trip on
    * one of the driver's vans that had MORE than ACTIVE_DAY_MIN_PINGS location pings.
    * Computed from LocationPing — never client-trusted (see backend/CLAUDE.md).
-   *
-   * PHASE 6 TODO: demo trips must be excluded from payouts (backend/CLAUDE.md). There is no
-   * demo marker on Trip yet (demo engine ships in Phase 6); add `isDemo`/exclude it here before
-   * demo mode goes live, or scripted demo trips will inflate activeDays.
+   * Demo trips (isDemo) are excluded so scripted sales demos never inflate a payout.
    */
   private async compute(
     driverId: string,
@@ -106,6 +103,7 @@ export class PayoutsService {
     const trips = await this.prisma.trip.findMany({
       where: {
         status: 'COMPLETED',
+        isDemo: false,
         startedAt: { gte: start, lt: end },
         van: { driverId },
       },

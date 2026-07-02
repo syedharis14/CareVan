@@ -15,3 +15,4 @@ export * from './api/billing.js';
 export * from './api/payouts.js';
 export * from './api/audit.js';
 export * from './api/admin.js';
+export * from './api/demo.js';

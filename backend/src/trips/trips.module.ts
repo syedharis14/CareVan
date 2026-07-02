@@ -8,5 +8,7 @@ import { TripsService } from './trips.service';
   imports: [AlertsModule],
   controllers: [TripsController],
   providers: [TripsService, PingProcessorService],
+  // Exported so the demo engine can drive the real trip/ping pipeline in-process.
+  exports: [TripsService, PingProcessorService],
 })
 export class TripsModule {}

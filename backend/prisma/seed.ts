@@ -7,6 +7,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { DEMO_SCHOOL } from '../src/demo/lahore-route';
 
 const prisma = new PrismaClient();
 
@@ -218,9 +219,51 @@ async function main(): Promise<void> {
     ],
   });
 
+  // --- DEMO entities (the founder's sales demo) ---
+  // The demo school MUST sit at the end of the scripted route in src/demo/lahore-route.ts.
+  const demoDriver = await prisma.user.create({
+    data: {
+      phone: '+923000000002',
+      name: 'Demo Driver',
+      role: 'DRIVER',
+      pinHash: await pin('1234'),
+    },
+  });
+  const demoParent = await prisma.user.create({
+    data: {
+      phone: '+923000000001',
+      name: 'Demo Parent',
+      role: 'PARENT',
+      pinHash: await pin('1234'),
+    },
+  });
+  const demoSchool = await prisma.school.create({
+    data: {
+      name: 'CareVan Demo School',
+      // Single source of truth with the scripted route's final point — keeps the geofence
+      // arrival working even if coordinates are ever retuned.
+      lat: DEMO_SCHOOL.lat,
+      lng: DEMO_SCHOOL.lng,
+      address: 'Main Boulevard, Gulberg, Lahore (demo)',
+    },
+  });
+  const demoStudent = await prisma.student.create({
+    data: { name: 'Ahmed (Demo)', schoolId: demoSchool.id, homeLat: 31.5128, homeLng: 74.3468 },
+  });
+  const demoVan = await prisma.van.create({
+    data: { driverId: demoDriver.id, plateNo: 'DEMO-001', capacity: 10, schoolId: demoSchool.id },
+  });
+  await prisma.studentParent.create({
+    data: { studentId: demoStudent.id, parentUserId: demoParent.id },
+  });
+  await prisma.vanStudent.create({
+    data: { vanId: demoVan.id, studentId: demoStudent.id, stopOrder: 1 },
+  });
+
   console.log('Seed complete. Login credentials (dev only):');
   console.table([
     { role: 'ADMIN', name: admin.name, phone: admin.phone, pin: '7788' },
+    { role: 'PARENT', name: demoParent.name, phone: demoParent.phone, pin: '1234' },
     { role: 'DRIVER', name: driverAkram.name, phone: driverAkram.phone, pin: '1122' },
     { role: 'DRIVER', name: driverRashid.name, phone: driverRashid.phone, pin: '1122' },
     { role: 'PARENT', name: ayesha.name, phone: ayesha.phone, pin: '3344' },

@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AlertsModule } from './alerts/alerts.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
+import { DemoModule } from './demo/demo.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PayoutsModule } from './payouts/payouts.module';
@@ -29,6 +30,7 @@ import { VansModule } from './vans/vans.module';
     TripsModule,
     BillingModule,
     PayoutsModule,
+    DemoModule,
   ],
   providers: [
     // Order matters: throttle first, then authenticate, then authorize (fail-closed).

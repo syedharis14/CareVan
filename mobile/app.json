@@ -7,25 +7,22 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#F5F7FA",
+    "icon": "./assets/icon.png",
     "newArchEnabled": true,
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "bundleIdentifier": "com.aamirtech.carevan",
       "supportsTablet": false,
       "infoPlist": {
-        "UIBackgroundModes": [
-          "location",
-          "fetch",
-          "remote-notification"
-        ],
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.aamirtech.carevan",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/monochrome.png",
         "backgroundColor": "#0F4C81"
       },
       "config": {
@@ -64,7 +61,16 @@
       [
         "expo-notifications",
         {
+          "icon": "./assets/notification-icon.png",
           "color": "#0F4C81"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0F4C81",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
         }
       ]
     ],

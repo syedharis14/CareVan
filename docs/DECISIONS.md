@@ -355,3 +355,22 @@ Format:
   `DEMO_SCHOOL` constant (no silent drift). **Follow-up (not v1-blocking): there is no automated
   test suite yet** — the demo path is verified live + by review each change; a backend integration
   test (test DB + fake timers asserting BOARDED→REACHED_SCHOOL) is the top hardening debt.
+
+## ADR-0025: Brand mark finalised + generated icon pipeline
+
+- 2026-07-03 / Accepted
+- Context: the app needed a real, consistent brand identity for store icons, splash, push
+  notifications, and the admin — replacing placeholder marks.
+- Decision: the CareVan mark is **final** — a school van cradled in green "safe arms" (green =
+  the child is held/safe), on a deep-trust-blue app tile; the push/notification icon is a **white
+  silhouette on transparent** (Android renders a grey blob otherwise). Three master SVGs live in
+  `brand/` (`mark.svg` full-colour, `icon.svg` blue tile, `mark-mono.svg` white silhouette) and
+  are the single source of truth; all PNGs (Expo icon/adaptive/monochrome/notification/splash,
+  admin favicon/apple-icon) are generated deterministically by `scripts/generate-icons.mjs`
+  (`@resvg/resvg-js`, run via `pnpm gen:icons`) and are **never hand-edited**. The admin wordmark
+  is live Inter text next to an inline SVG mark (`admin/components/Logo.tsx`); the mobile in-app
+  logo composes the mark PNG with an Inter wordmark (no react-native-svg needed).
+- Consequences: re-running `gen:icons` after editing a master SVG regenerates every asset; the
+  native icon/splash/notification changes require a fresh EAS build (or `expo prebuild --clean`)
+  to appear on device. Colours follow the locked tokens; brand-mark hex is defined by the mark
+  itself (an accepted brand exception to "consume tokens").

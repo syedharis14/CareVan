@@ -1,3 +1,4 @@
+import { Logo } from '@/components/Logo';
 import { Sidebar } from '@/components/Sidebar';
 import { logoutAction } from '@/lib/auth-actions';
 
@@ -9,7 +10,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         style={{ borderRight: '1px solid var(--color-primary-light)' }}
       >
         <div>
-          <div className="cv-text-primary mb-6 text-2xl font-extrabold">CareVan</div>
+          <div className="mb-6">
+            <Logo size={30} />
+          </div>
           <Sidebar />
         </div>
         <form action={logoutAction}>

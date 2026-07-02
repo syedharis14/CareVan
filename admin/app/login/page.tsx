@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Logo } from '@/components/Logo';
 import { loginAction, type LoginState } from '@/lib/auth-actions';
 
 const initial: LoginState = {};
@@ -11,8 +12,8 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <form action={action} className="cv-card w-full max-w-sm p-8">
-        <h1 className="cv-text-primary text-3xl font-extrabold">CareVan</h1>
-        <p className="cv-text-soft mb-6 text-sm">Admin panel · Aamir Technologies</p>
+        <Logo size={40} />
+        <p className="cv-text-soft mb-6 mt-1 text-sm">Admin panel · Aamir Technologies</p>
 
         <label className="mb-1 block text-sm font-semibold">Phone</label>
         <input

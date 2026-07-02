@@ -1,6 +1,6 @@
 # CareVan — root context
 
-CareVan (company: Aamir Technologies) is a child-safety subscription layer on top of Pakistan's
+CareVan is a child-safety subscription layer on top of Pakistan's
 existing school-van arrangements: live van tracking, proactive boarded/dropped/reached push alerts,
 a daily speed-based driver safety score, and SOS. Parents pay monthly; drivers run a dead-simple
 app and are paid by us for verified active usage in Phase 1.
@@ -9,8 +9,8 @@ app and are paid by us for verified active usage in Phase 1.
 failure, not a bug. Alert delivery reliability outranks every other concern in every trade-off.
 
 Brand: use "CareVan" in all app names, package ids (`com.aamirtech.carevan`), repo naming, and UI
-copy. "Aamir Technologies" appears only in legal/about contexts. (The name is a triple pun:
-Care+Van in English; spoken "caravan"; Urdu کارواں "karwan" — travelers grouping for safety.)
+copy. (The name is a triple pun: Care+Van in English; spoken "caravan"; Urdu کارواں "karwan" —
+travelers grouping for safety.)
 
 ## Locked v1 scope — DO NOT EXPAND
 

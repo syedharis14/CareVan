@@ -1,6 +1,6 @@
 # CareVan
 
-School-van child-safety platform for Pakistan, by Aamir Technologies. Parents get live van
+School-van child-safety platform for Pakistan. Parents get live van
 tracking, proactive boarded/dropped/reached push alerts, a daily driver safety score, and SOS —
 as a monthly subscription on top of their existing van arrangement.
 

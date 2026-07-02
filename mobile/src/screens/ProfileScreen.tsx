@@ -146,7 +146,7 @@ export function ProfileScreen() {
       </Pressable>
 
       <Text variant="caption" color={colors.inkSoft} center style={styles.legal}>
-        CareVan by Aamir Technologies
+        CareVan
       </Text>
     </Screen>
   );

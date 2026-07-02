@@ -1,8 +1,8 @@
 # CareVan — PRD (v1)
 
-Company: **Aamir Technologies**. Product name everywhere user-facing: **CareVan** — a triple pun:
+Product name everywhere user-facing: **CareVan** — a triple pun:
 Care+Van in English, spoken "caravan", Urdu کارواں "karwan" (travelers grouping for safety).
-"Aamir Technologies" appears only in legal/about contexts. Package id: `com.aamirtech.carevan`.
+Package id: `com.aamirtech.carevan`.
 
 ## Problem
 

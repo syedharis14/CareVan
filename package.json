@@ -2,7 +2,7 @@
   "name": "carevan",
   "version": "0.0.1",
   "private": true,
-  "description": "CareVan — school-van child-safety platform (Aamir Technologies)",
+  "description": "CareVan — school-van child-safety platform for Pakistan",
   "packageManager": "pnpm@10.12.1",
   "engines": {
     "node": ">=20.19"

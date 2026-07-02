@@ -13,7 +13,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <form action={action} className="cv-card w-full max-w-sm p-8">
         <Logo size={40} />
-        <p className="cv-text-soft mb-6 mt-1 text-sm">Admin panel · Aamir Technologies</p>
+        <p className="cv-text-soft mb-6 mt-1 text-sm">Admin panel</p>
 
         <label className="mb-1 block text-sm font-semibold">Phone</label>
         <input

@@ -2,13 +2,16 @@ import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { navigationRef } from './src/navigation/navigationRef';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { usePushRouting } from './src/notifications/usePushRouting';
 import { useAuthStore } from './src/store/authStore';
 import { SYNC_INTERVAL_MS } from './src/config';
 import { syncNow } from './src/sync/syncEngine';
 
 export default function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
+  usePushRouting();
 
   useEffect(() => {
     void hydrate();
@@ -24,7 +27,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <RootNavigator />
       </NavigationContainer>
     </SafeAreaProvider>

@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Put } from '@nestjs/common';
 import {
+  ChildrenResponse,
   DriverVansResponse,
   DriverVansResponseSchema,
   RegisterPushTokenRequest,
@@ -10,14 +11,23 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { AuthPrincipal } from '../common/types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { PrismaService } from '../prisma/prisma.service';
+import { ParentService } from './parent.service';
 import { UsersService } from './users.service';
 
 @Controller('me')
 export class MeController {
   constructor(
     private readonly usersService: UsersService,
+    private readonly parentService: ParentService,
     private readonly prisma: PrismaService,
   ) {}
+
+  /** The parent home screen — each linked child with derived status, van, and safety. */
+  @Roles('PARENT')
+  @Get('children')
+  children(@CurrentUser() user: AuthPrincipal): Promise<ChildrenResponse> {
+    return this.parentService.childrenFor(user.id);
+  }
 
   /** The mobile app registers its Expo push token after login and on token rotation. */
   @Roles('ADMIN', 'DRIVER', 'PARENT')

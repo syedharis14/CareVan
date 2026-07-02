@@ -2,6 +2,8 @@ import {
   ActiveTripResponse,
   ActiveTripResponseSchema,
   AuthUser,
+  ChildrenResponse,
+  ChildrenResponseSchema,
   DriverVansResponse,
   DriverVansResponseSchema,
   LoginResponse,
@@ -68,6 +70,11 @@ export const driverApi = {
       body: { note },
       schema: SosResponseSchema,
     }),
+};
+
+export const parentApi = {
+  children: (): Promise<ChildrenResponse> =>
+    apiRequest('/me/children', { schema: ChildrenResponseSchema }),
 };
 
 export const meApi = {

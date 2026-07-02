@@ -1,9 +1,10 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LoginScreen } from '../screens/LoginScreen';
-import { AdminNoticeScreen, ParentPlaceholderScreen } from '../screens/InfoScreen';
+import { AdminNoticeScreen } from '../screens/InfoScreen';
 import { useAuthStore } from '../store/authStore';
 import { theme } from '../theme/theme';
 import { DriverNavigator } from './DriverNavigator';
+import { ParentNavigator } from './ParentNavigator';
 
 export function RootNavigator() {
   const status = useAuthStore((s) => s.status);
@@ -24,7 +25,7 @@ export function RootNavigator() {
     case 'DRIVER':
       return <DriverNavigator />;
     case 'PARENT':
-      return <ParentPlaceholderScreen />;
+      return <ParentNavigator />;
     default:
       return <AdminNoticeScreen />;
   }

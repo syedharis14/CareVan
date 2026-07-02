@@ -1,5 +1,6 @@
 {
-  "extends": "expo/tsconfig.base",
+  "$comment": "Explicit path (not bare 'expo/tsconfig.base') because node-linker=hoisted means expo lives in the workspace-root node_modules, not mobile/node_modules — editors that don't walk up otherwise fail to resolve it.",
+  "extends": "../node_modules/expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,

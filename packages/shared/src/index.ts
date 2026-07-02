@@ -10,3 +10,4 @@ export * from './api/students.js';
 export * from './api/trips.js';
 export * from './api/push.js';
 export * from './api/driver.js';
+export * from './api/parent.js';

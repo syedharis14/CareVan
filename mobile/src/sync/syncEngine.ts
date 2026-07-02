@@ -6,8 +6,15 @@ import { markEventsSynced, markPingsSynced, unsyncedEvents, unsyncedPings } from
  * Drains the SQLite outbox to the server in batches. Idempotent by construction:
  * the server dedupes on the client UUID, so a failed flush simply retries next tick
  * — nothing is ever lost, nothing is double-counted. Never throws to callers.
+ *
+ * On repeated network failure it backs off exponentially (30s → … → 5min) so a
+ * persistently-unreachable server isn't hammered every tick; a success resets it.
  */
 let running = false;
+let failureStreak = 0;
+let nextAttemptAt = 0;
+const BACKOFF_BASE_MS = 30_000;
+const BACKOFF_MAX_MS = 5 * 60_000;
 
 function groupByTrip<T extends { tripId: string }>(rows: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>();
@@ -19,9 +26,11 @@ function groupByTrip<T extends { tripId: string }>(rows: T[]): Map<string, T[]> 
   return map;
 }
 
-async function flushEvents(): Promise<void> {
+/** Returns true if a network/server error occurred (so the caller can back off). */
+async function flushEvents(): Promise<boolean> {
   const rows = await unsyncedEvents(50);
-  if (rows.length === 0) return;
+  if (rows.length === 0) return false;
+  let hadError = false;
   for (const [tripId, group] of groupByTrip(rows)) {
     const events: TripEventInput[] = group.map((r) => ({
       id: r.id,
@@ -32,18 +41,25 @@ async function flushEvents(): Promise<void> {
       lng: r.lng ?? undefined,
     }));
     try {
-      await driverApi.postEvents(tripId, { events });
+      const res = await driverApi.postEvents(tripId, { events });
       // accepted / duplicate / rejected are all terminal — the server has handled them.
       await markEventsSynced(group.map((r) => r.id));
+      // A hard reject (e.g. STUDENT_NOT_ON_VAN) won't succeed on retry, but a dropped
+      // safety event must be visible rather than silently swallowed.
+      if (res.rejected.length > 0) {
+        console.warn('[sync] server rejected events', res.rejected);
+      }
     } catch {
-      // Leave unsynced; the next tick retries.
+      hadError = true; // leave unsynced; retried next tick
     }
   }
+  return hadError;
 }
 
-async function flushPings(): Promise<void> {
+async function flushPings(): Promise<boolean> {
   const rows = await unsyncedPings(300);
-  if (rows.length === 0) return;
+  if (rows.length === 0) return false;
+  let hadError = false;
   for (const [tripId, group] of groupByTrip(rows)) {
     const pings: PingInput[] = group.map((r) => ({
       id: r.id,
@@ -56,18 +72,27 @@ async function flushPings(): Promise<void> {
       await driverApi.postPings(tripId, { pings });
       await markPingsSynced(group.map((r) => r.id));
     } catch {
-      // Leave unsynced; the next tick retries.
+      hadError = true;
     }
   }
+  return hadError;
 }
 
-/** Flush the whole outbox once. Safe to call frequently; self-coalescing. */
+/** Flush the whole outbox once. Safe to call frequently; self-coalescing + backoff. */
 export async function syncNow(): Promise<void> {
-  if (running) return;
+  if (running || Date.now() < nextAttemptAt) return;
   running = true;
   try {
-    await flushEvents();
-    await flushPings();
+    const eventsErr = await flushEvents();
+    const pingsErr = await flushPings();
+    if (eventsErr || pingsErr) {
+      failureStreak += 1;
+      const delay = Math.min(BACKOFF_BASE_MS * 2 ** (failureStreak - 1), BACKOFF_MAX_MS);
+      nextAttemptAt = Date.now() + delay;
+    } else {
+      failureStreak = 0;
+      nextAttemptAt = 0;
+    }
   } finally {
     running = false;
   }

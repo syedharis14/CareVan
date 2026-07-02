@@ -3,3 +3,8 @@ export type DriverStackParamList = {
   ActiveTrip: undefined;
   BatteryWhitelist: undefined;
 };
+
+export type ParentStackParamList = {
+  Children: undefined;
+  ChildDetail: { studentId: string };
+};

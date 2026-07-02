@@ -190,6 +190,10 @@ model TripEvent {
 
   alerts AlertLog[]
 
+  // Defense in depth against duplicate alerts: a student can have at most one event
+  // of each type per trip. A re-tap that dodged the client guard arrives with a new
+  // UUID but collides here (P2002) and is treated as a duplicate — never a 2nd alert.
+  @@unique([tripId, studentId, type])
   @@index([tripId])
 }
 

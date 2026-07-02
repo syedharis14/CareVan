@@ -128,9 +128,15 @@ export const useTripStore = create<TripState>()((set, get) => ({
   refreshStatuses: async () => {
     const { trip, students } = get();
     if (!trip) return;
+    // Read the local outbox FIRST, then the server. This ordering is load-bearing:
+    // if an event is still unsynced it's captured here; if it gets synced during this
+    // call, the later server read is guaranteed to include it (markEventsSynced only
+    // runs after postEvents commits). Reading server-first opens a gap where an
+    // in-flight event is in neither set → status resets to PENDING → a re-tap fires a
+    // duplicate BOARDED. (Server-side @@unique([tripId,studentId,type]) is the backstop.)
+    const localEvents = await unsyncedEventsForTrip(trip.id);
     const detail = await driverApi.activeTrip();
     const serverEvents = detail.trip?.events ?? [];
-    const localEvents = await unsyncedEventsForTrip(trip.id);
     const merged = [
       ...serverEvents.map((e) => ({ studentId: e.studentId, type: e.type, at: e.at.getTime() })),
       ...localEvents.map((e) => ({

@@ -55,9 +55,31 @@ ColorOS aggressively kills background apps. Mandatory handling:
 - Tokens come from `@carevan/shared` — never hardcode hex values. Red = SOS/danger only.
   Status is never color-only: always icon + label.
 
+## Implemented structure (Phases 3–4)
+
+- `src/api/` — fetch client (bearer via token provider) + `endpoints.ts`; every response parsed
+  through `@carevan/shared` zod schemas.
+- `src/db/` (expo-sqlite) + `src/sync/syncEngine.ts` — the offline outbox: write-before-network,
+  survives kill, idempotent batched flush.
+- `src/location/locationTask.ts` — foreground-service tracking; background ping upload throttled
+  to ~30s (kv timestamp) to hit the 30–60s batch target.
+- `src/store/` — `authStore` (secure-store token), `tripStore` (driver), `parentStore` (parent).
+- Driver: `screens/driver/*` (Today, ActiveTrip, BatteryWhitelist) + SOS.
+- Parent: `screens/parent/*` (Children status cards, ChildDetail live map + ETA + DriverCard +
+  SafetyStrip); polls `GET /me/children` on open + every ~15s; `usePushRouting` deep-links a
+  tapped alert to the child. **Reconciles on open — never depends on push arriving.**
+
+### Maps
+
+The parent live map uses `react-native-maps`. iOS uses Apple Maps (no key). **Android needs a
+Google Maps API key** — set `android.config.googleMaps.apiKey` in `app.json` (placeholder is
+committed) before an Android build, or the map renders blank.
+
 ## EAS builds
 
 - `eas build --profile development --platform android` / `--platform ios` — dev client, internal
   distribution (iOS 16+ target for the iPhone dev build).
 - `eas build --profile preview --platform android` — APK for sideloading onto the Oppo F21 Pro.
 - App id: `com.aamirtech.carevan` on both platforms; display name "CareVan".
+- Set the API base for a device build via `EXPO_PUBLIC_API_URL` (LAN IP, not localhost) or
+  `app.json` `extra.apiUrl`.

@@ -262,3 +262,42 @@ Format:
     and dispatches through the existing push pipeline — PUSH channel only, no SMS (per scope).
   - Contract added to `@carevan/shared` first (api/driver.ts, SOS in api/trips.ts).
 - Consequences: one install strategy for the whole repo; SOS reuses the alert spine (traceable).
+
+## ADR-0021: Parent flow reads a single derived-status endpoint (Phase 4)
+
+- 2026-07-02 / Accepted
+- Context: the parent home is the child-status card; the app must show the right state even when a
+  push is missed, and must not leak other families' data.
+- Decisions:
+  - `GET /me/children` (PARENT) returns each linked child with a **server-derived** status
+    (IDLE / WAITING / ON_VAN_TO_SCHOOL / AT_SCHOOL / ON_VAN_TO_HOME / AT_HOME), van + driver,
+    last ping, subscription status, today's overspeed count, and an SOS flag. The app polls it on
+    open and every ~15s — push is a latency optimization, never the source of truth.
+  - Live map + ETA are client-side: `react-native-maps` + a straight-line distance ÷ recent-speed
+    estimate. No routing engine (v1 scope). Android requires a Google Maps API key (documented).
+  - "Call driver" is a native `tel:` link — no in-app calling/chat/SMS.
+  - Notification tap → `usePushRouting` + a navigation ref deep-links to that child's live screen.
+- Consequences: parent data is scoped to StudentParent links; the map degrades to a "no active
+  trip" card when the van is idle; ETA is intentionally approximate.
+
+## ADR-0022: Phase 4 code-review fixes (duplicate-BOARDED, timezone)
+
+- 2026-07-02 / Accepted
+- Context: review of the full mobile app found a critical-class alert-integrity race plus a
+  parent-facing metric bug.
+- Decisions:
+  - Duplicate-BOARDED race (HIGH): `refreshStatuses` now reads the local outbox BEFORE the server
+    (an in-flight event is otherwise in neither set → resets to PENDING → a re-tap fires a second
+    alert). Server backstop: `TripEvent @@unique([tripId, studentId, type])` — a re-tap with a new
+    UUID collides (P2002) and is recorded as a duplicate, so at most one alert per type per
+    student per trip. Verified live.
+  - Daily-safety timezone (MEDIUM): the overspeed-count day boundary is computed in `Asia/Karachi`
+    (UTC+5, no DST) so a UTC host doesn't reset the parent's "safe today" strip at 5am PKT.
+  - Retry backoff: the outbox sync now backs off exponentially (30s → 5min) on repeated network
+    failure, resetting on success — instead of a flat 30s hammer.
+  - Hardening: shared `AlertPushDataSchema` (safeParsed in the push-tap router instead of an
+    `as` cast); `tel:` call has a failure fallback; the live map uses `initialRegion` +
+    imperative `animateToRegion` (>75m move) so the parent's pan/zoom isn't reset each poll;
+    rejected events are logged, not silently swallowed.
+  - Noted, not blocking: `parent.service.ts` is N+1 bounded by a parent's child count — fine at v1
+    scale; batch if the parent base grows.

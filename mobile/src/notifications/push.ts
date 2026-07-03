@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { colors } from '../theme/theme';
 
 // Foreground alerts still surface a banner — parents (and drivers, for SOS ack) must
 // never miss one because the app happened to be open.
@@ -22,10 +23,17 @@ export async function registerForPushToken(): Promise<string | null> {
   if (!Device.isDevice) return null;
 
   if (Platform.OS === 'android') {
+    // MAX importance + PUBLIC lock-screen visibility so BOARDED/REACHED alerts break through
+    // Doze and show a heads-up even when the phone is locked. The backend push sets
+    // channelId 'default' to target this channel — the two MUST stay in sync.
     await Notifications.setNotificationChannelAsync('default', {
       name: 'CareVan alerts',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      sound: 'default',
+      lightColor: colors.primary,
+      enableVibrate: true,
     });
   }
 

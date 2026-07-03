@@ -154,6 +154,11 @@ export class AlertsService {
           title: ALERT_TITLE,
           body: alert.message,
           priority: 'high',
+          // Must match the MAX-importance Android channel the app creates (mobile/src/notifications/push.ts).
+          // Without this the push lands on a low-importance fallback channel — no heads-up, no sound,
+          // and it can be suppressed on the lock screen. A missed alert is a critical failure.
+          channelId: 'default',
+          sound: 'default',
           data: { type: alert.type, tripId: alert.tripId, studentId: alert.studentId },
         },
       });

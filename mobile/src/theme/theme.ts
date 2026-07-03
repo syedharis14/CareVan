@@ -74,24 +74,32 @@ export const radii = {
 export const elevation = {
   sm: {
     shadowColor: brand.ink,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 1,
   } satisfies ViewStyle,
   md: {
     shadowColor: brand.ink,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
     elevation: 3,
   } satisfies ViewStyle,
   lg: {
     shadowColor: brand.ink,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.12,
+    shadowRadius: 28,
+    elevation: 10,
+  } satisfies ViewStyle,
+  /** Upward-cast shadow for the ride-hailing bottom sheet (sits above the map). */
+  sheet: {
+    shadowColor: brand.ink,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.1,
     shadowRadius: 24,
-    elevation: 8,
+    elevation: 16,
   } satisfies ViewStyle,
 } as const;
 

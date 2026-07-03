@@ -76,6 +76,7 @@
     ],
     "extra": {
       "apiUrl": "http://localhost:3005",
+      "googleMapsApiKey": "AIzaSyDV8PB_t5AcnrGW9DrTqRdCctLUHEu48Io",
       "eas": {
         "projectId": "ca0de204-0878-48bc-9e1f-9ff114e3f06e"
       }

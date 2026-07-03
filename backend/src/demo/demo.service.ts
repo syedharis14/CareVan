@@ -6,9 +6,12 @@ import { AuthPrincipal } from '../common/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { PingProcessorService } from '../trips/ping-processor.service';
 import { TripsService } from '../trips/trips.service';
-import { DEMO_PING_INTERVAL_S, DEMO_ROUTE } from './lahore-route';
+import { Coord, DEMO_LEGS, DEMO_PING_INTERVAL_S } from './lahore-route';
 
 export const DEMO_VAN_PLATE = 'DEMO-001';
+
+const TOTAL_PINGS =
+  DEMO_LEGS.approach.length + DEMO_LEGS.toSchool.length + DEMO_LEGS.toHome.length;
 
 interface DemoState {
   running: boolean;
@@ -21,22 +24,29 @@ interface DemoState {
 }
 
 /**
- * The founder's sales demo. It creates a REAL trip on the seeded demo van and drives
- * it through the SAME services production uses — TripsService.postEvents for BOARDED
- * and PingProcessorService.ingest for each scripted ping — so REACHED_SCHOOL is derived
- * by the real geofence and every alert gets a real AlertLog row + push. No parallel path.
+ * The founder's sales demo — the full day in one tap. It creates REAL trips on the seeded
+ * demo van and drives them through the SAME services production uses (TripsService.postEvents
+ * for BOARDED, PingProcessorService.ingest for each ping), so BOARDED / REACHED_SCHOOL /
+ * REACHED_HOME all flow through the real event + geofence + alert pipeline. No parallel path,
+ * no faked pushes.
+ *
+ * Sequence: PICKUP trip {approach → BOARDED at home → drive to school → REACHED_SCHOOL},
+ * then DROPOFF trip {BOARDED at school → drive home → REACHED_HOME}.
  */
 @Injectable()
 export class DemoService {
   private readonly logger = new Logger(DemoService.name);
   private timers: NodeJS.Timeout[] = [];
+  private vanId: string | null = null;
+  private studentId: string | null = null;
+  private driver: AuthPrincipal | null = null;
   private state: DemoState = {
     running: false,
     tripId: null,
     boardedFired: false,
     reachedFired: false,
     pingsSent: 0,
-    totalPings: DEMO_ROUTE.length,
+    totalPings: TOTAL_PINGS,
     startedAt: null,
   };
 
@@ -49,7 +59,7 @@ export class DemoService {
   async start(): Promise<DemoStartResponse> {
     if (this.state.running) throw new ConflictException('A demo is already running');
     // Acquire the lock SYNCHRONOUSLY (before any await) so a double-click / second tab
-    // can't slip through the guard→await gap and launch two overlapping demo trips.
+    // can't slip through the guard→await gap and launch two overlapping demo runs.
     this.reset();
     this.state = {
       running: true,
@@ -57,7 +67,7 @@ export class DemoService {
       boardedFired: false,
       reachedFired: false,
       pingsSent: 0,
-      totalPings: DEMO_ROUTE.length,
+      totalPings: TOTAL_PINGS,
       startedAt: new Date(),
     };
 
@@ -69,59 +79,28 @@ export class DemoService {
       if (!van || van.students.length === 0) {
         throw new BadRequestException('Demo data missing — run `pnpm prisma db seed` first');
       }
-      const driver: AuthPrincipal = {
-        id: van.driver.id,
-        phone: van.driver.phone,
-        role: 'DRIVER',
-      };
-      const studentId = van.students[0]!.studentId;
+      this.vanId = van.id;
+      this.driver = { id: van.driver.id, phone: van.driver.phone, role: 'DRIVER' };
+      this.studentId = van.students[0]!.studentId;
 
-      // Reap any orphaned ACTIVE demo trips (e.g. a crash between BOARDED and finish) so
-      // they don't linger on the admin live map or stack up over repeated demos.
+      // Reap any orphaned ACTIVE demo trips (e.g. a crash mid-run) so they don't linger on the
+      // admin live map or stack up over repeated demos.
       await this.prisma.trip.updateMany({
         where: { isDemo: true, status: 'ACTIVE' },
         data: { status: 'ABORTED', endedAt: new Date() },
       });
 
-      // A real trip, flagged isDemo so payouts/rollups skip it.
-      const trip = await this.prisma.trip.create({
+      // Leg 1+2 live on a real PICKUP trip.
+      const pickup = await this.prisma.trip.create({
         data: { vanId: van.id, type: 'PICKUP', isDemo: true },
       });
-      this.state.tripId = trip.id;
+      this.state.tripId = pickup.id;
+      this.schedulePickup(pickup.id);
 
-      // BOARDED right away (the hero beat) — through the real event pipeline. If it fails,
-      // abort the whole run rather than showing a moving van with no alerts.
-      await this.trips.postEvents(driver, trip.id, {
-        events: [{ id: randomUUID(), studentId, type: 'BOARDED', at: new Date() }],
-      });
-      this.state.boardedFired = true;
-
-      // Scripted pings, one every DEMO_PING_INTERVAL_S — each through the real ingest path,
-      // so the geofence fires REACHED_SCHOOL once the van enters the school fence.
-      DEMO_ROUTE.forEach((point, i) => {
-        const prev = i > 0 ? DEMO_ROUTE[i - 1] : null;
-        const speedKmh = prev
-          ? (distanceMeters(prev.lat, prev.lng, point.lat, point.lng) / 1000) *
-            (3600 / DEMO_PING_INTERVAL_S)
-          : 0;
-        const timer = setTimeout(
-          () => void this.emitPing(driver, trip.id, point, speedKmh),
-          i * DEMO_PING_INTERVAL_S * 1000,
-        );
-        this.timers.push(timer);
-      });
-
-      // Complete the trip a beat after the last ping.
-      const endTimer = setTimeout(
-        () => void this.finish(driver, trip.id),
-        (DEMO_ROUTE.length + 1) * DEMO_PING_INTERVAL_S * 1000,
-      );
-      this.timers.push(endTimer);
-
-      return { tripId: trip.id, message: 'Demo started — watch the parent phone.' };
+      return { tripId: pickup.id, message: 'Demo started — watch the parent phone.' };
     } catch (e) {
-      // Setup/BOARDED failed — release the lock so the founder can retry, and don't leave
-      // the freshly-created demo trip ACTIVE.
+      // Setup failed — release the lock so the founder can retry, and don't leave the
+      // freshly-created demo trip ACTIVE.
       this.reset();
       const orphan = this.state.tripId;
       this.state.running = false;
@@ -139,10 +118,115 @@ export class DemoService {
     return DemoStatusResponseSchema.parse(this.state);
   }
 
+  /** PICKUP leg: approach home (WAITING) → BOARDED at home → drive to school → REACHED_SCHOOL. */
+  private schedulePickup(tripId: string): void {
+    const driver = this.driver!;
+    const studentId = this.studentId!;
+    const interval = DEMO_PING_INTERVAL_S * 1000;
+    let step = 0;
+
+    // Leg 1 — approach: van drives toward home. Child status stays WAITING ("driver is coming").
+    DEMO_LEGS.approach.forEach((pt, i) => {
+      const speed = this.speed(DEMO_LEGS.approach, i);
+      this.schedule((step + i) * interval, () => void this.emitPing(driver, tripId, pt, speed));
+    });
+    step += DEMO_LEGS.approach.length;
+
+    // BOARDED at home (the first hero push) → ON_VAN_TO_SCHOOL.
+    this.schedule(step * interval, () => void this.fireBoarded(driver, tripId, studentId));
+    step += 1;
+
+    // Leg 2 — home → school. The van enters the school fence near the end → REACHED_SCHOOL.
+    DEMO_LEGS.toSchool.forEach((pt, i) => {
+      const speed = this.speed(DEMO_LEGS.toSchool, i);
+      this.schedule((step + i) * interval, () => void this.emitPing(driver, tripId, pt, speed));
+    });
+    step += DEMO_LEGS.toSchool.length;
+
+    // End the pickup trip, then start + drive the dropoff trip.
+    this.schedule((step + 1) * interval, () => void this.runDropoff());
+  }
+
+  /** DROPOFF leg: end pickup → new DROPOFF trip → BOARDED at school → drive home → REACHED_HOME. */
+  private async runDropoff(): Promise<void> {
+    const driver = this.driver;
+    const studentId = this.studentId;
+    const vanId = this.vanId;
+    if (!driver || !studentId || !vanId) {
+      this.state.running = false;
+      return;
+    }
+
+    const pickupId = this.state.tripId;
+
+    // Atomic handoff: complete the pickup and open the dropoff in ONE transaction so the demo
+    // van is never momentarily without an ACTIVE trip — otherwise a parent poll landing in that
+    // gap flickers the hero screen to the "no trip" view mid-demo. We set the pickup's status
+    // directly instead of via trips.end() (which only sets status + endedAt) so both writes commit
+    // together.
+    let dropoffId: string;
+    try {
+      const dropoff = await this.prisma.$transaction(async (tx) => {
+        if (pickupId) {
+          await tx.trip.update({
+            where: { id: pickupId },
+            data: { status: 'COMPLETED', endedAt: new Date() },
+          });
+        }
+        return tx.trip.create({ data: { vanId, type: 'DROPOFF', isDemo: true } });
+      });
+      dropoffId = dropoff.id;
+    } catch (e) {
+      this.logger.error(`demo dropoff handoff failed: ${this.msg(e)}`);
+      this.state.running = false;
+      return;
+    }
+    this.state.tripId = dropoffId;
+
+    // "Boarded for home" push (child gets on at school). Status stays ON_VAN_TO_HOME.
+    await this.fireBoarded(driver, dropoffId, studentId);
+
+    // Leg 3 — school → home. The van enters the home fence near the end → REACHED_HOME.
+    const interval = DEMO_PING_INTERVAL_S * 1000;
+    DEMO_LEGS.toHome.forEach((pt, i) => {
+      const speed = this.speed(DEMO_LEGS.toHome, i);
+      this.schedule(i * interval, () => void this.emitPing(driver, dropoffId, pt, speed));
+    });
+    this.schedule((DEMO_LEGS.toHome.length + 1) * interval, () => void this.finish(driver, dropoffId));
+  }
+
+  private schedule(delayMs: number, fn: () => void): void {
+    this.timers.push(setTimeout(fn, delayMs));
+  }
+
+  /** Scripted speed from the gap to the previous point (km/h); 0 for the first point of a leg. */
+  private speed(route: Coord[], i: number): number {
+    const prev = i > 0 ? route[i - 1] : null;
+    const pt = route[i]!;
+    return prev
+      ? (distanceMeters(prev.lat, prev.lng, pt.lat, pt.lng) / 1000) * (3600 / DEMO_PING_INTERVAL_S)
+      : 0;
+  }
+
+  private async fireBoarded(
+    driver: AuthPrincipal,
+    tripId: string,
+    studentId: string,
+  ): Promise<void> {
+    try {
+      await this.trips.postEvents(driver, tripId, {
+        events: [{ id: randomUUID(), studentId, type: 'BOARDED', at: new Date() }],
+      });
+      this.state.boardedFired = true;
+    } catch (e) {
+      this.logger.error(`demo boarded failed: ${this.msg(e)}`);
+    }
+  }
+
   private async emitPing(
     driver: AuthPrincipal,
     tripId: string,
-    point: { lat: number; lng: number },
+    point: Coord,
     speedKmh: number,
   ): Promise<void> {
     try {
@@ -150,9 +234,9 @@ export class DemoService {
         pings: [{ id: randomUUID(), lat: point.lat, lng: point.lng, speedKmh, at: new Date() }],
       });
       this.state.pingsSent += 1;
-      // Reflect the real geofence outcome in demo status.
+      // Reflect the real geofence outcome (school OR home) in demo status.
       const reached = await this.prisma.alertLog.count({
-        where: { tripId, type: 'REACHED_SCHOOL' },
+        where: { tripId, type: { in: ['REACHED_SCHOOL', 'REACHED_HOME'] } },
       });
       if (reached > 0) this.state.reachedFired = true;
     } catch (e) {

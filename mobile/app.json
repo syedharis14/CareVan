@@ -9,12 +9,18 @@
     "backgroundColor": "#F5F7FA",
     "icon": "./assets/icon.png",
     "newArchEnabled": true,
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "bundleIdentifier": "com.aamirtech.carevan",
       "supportsTablet": false,
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -72,10 +78,18 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 200
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
       ]
     ],
     "extra": {
-      "apiUrl": "http://localhost:3005",
+      "apiUrl": "http://54.169.214.202:3005",
       "googleMapsApiKey": "AIzaSyDV8PB_t5AcnrGW9DrTqRdCctLUHEu48Io",
       "eas": {
         "projectId": "ca0de204-0878-48bc-9e1f-9ff114e3f06e"
